@@ -10,7 +10,6 @@ find_package(catkin_simple REQUIRED)
 #find_package(PCL 1.7 REQUIRED)
 #include_directories(${PCL_INCLUDE_DIRS})
 
-
 #uncomment the following 4 lines to use the Eigen library
 #find_package(cmake_modules REQUIRED)
 #find_package(Eigen3 REQUIRED)
@@ -26,12 +25,10 @@ catkin_simple()
 # use carefully;  can interfere with point-cloud library
 # SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
-# Libraries: uncomment the following and edit arguments to create a new library
-# cs_add_library(my_lib src/my_lib.cpp)   
-
 # Executables: uncomment the following and edit arguments to compile new nodes
 # may add more of these lines for more nodes from the same package
-cs_add_executable(find_params src/find_params.cpp)
+cs_add_executable(learn_params src/learn_params.cpp)
+
 cs_add_executable(test_ispl src/test_ispl.cpp)
 
 #the following is required, if desire to link a node in this package with a library created in this same package

@@ -10,7 +10,6 @@
 
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-double wobbler_angle;
 ros::NodeHandle * nh_ptr;
 pcl::PointCloud<pcl::PointXYZ> cloud;
 ros::Publisher * pubCloud_ptr;
@@ -20,11 +19,19 @@ void cloudCallback(const PointCloud::ConstPtr& cloud_holder)
 
 }
 
+int learn_intrinsic_parameters()
+{
+
+
+
+	return 0;
+}
+
 
  
 int main(int argc, char **argv)
 {
-    ros::init(argc,argv,"test_ispl");
+    ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
