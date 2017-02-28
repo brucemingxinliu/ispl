@@ -6,18 +6,20 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
-#define PI 3.14159265
-
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
-
-double wobbler_angle;
 ros::NodeHandle * nh_ptr;
-pcl::PointCloud<pcl::PointXYZ> cloud;
-ros::Publisher * pubCloud_ptr;
 
-void cloudCallback(const PointCloud::ConstPtr& cloud_holder)
+bool is_reasonable_param(float sensor_param_val)
 {
-
+    if((sensor_param_val < 100000) && (sensor_param_val > 0))
+    {
+        ROS_INFO("%f sounds good", sensor_param_val);
+        return true;  
+    }
+    else
+    {
+        ROS_INFO("%f is not a reasonable param value.", sensor_param_val);
+        return true;  
+    }
 }
  
 int main(int argc, char **argv)
@@ -26,6 +28,8 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
+
+    bool node_level_tests_passed = false;
 
     ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm TEST module");
 
@@ -41,19 +45,39 @@ int main(int argc, char **argv)
     	}
     }
 
-	if( 1 ) // Need to improve, obviously!
+    float z_hit;;
+    float z_short;
+    float z_max;
+    float z_rand;
+    float sig_hit;
+    float lam_short;
+
+    if (nh_ptr->getParam("/ispl/z_hit", z_hit) &&
+        nh_ptr->getParam("/ispl/z_short", z_short) &&
+        nh_ptr->getParam("/ispl/z_max", z_max) &&
+        nh_ptr->getParam("/ispl/z_rand", z_rand) &&
+        nh_ptr->getParam("/ispl/sig_hit", sig_hit) &&
+        nh_ptr->getParam("/ispl/lam_short", lam_short))
+    {
+        if (is_reasonable_param(z_hit) &&
+            is_reasonable_param(z_short) &&
+            is_reasonable_param(z_max) &&
+            is_reasonable_param(z_rand) &&
+            is_reasonable_param(sig_hit) &&
+            is_reasonable_param(lam_short))
+        {
+            node_level_tests_passed = true;
+        }
+    }
+
+	if(node_level_tests_passed == true)
 	{
-		ROS_INFO("NODE TEST PASSED: ALL VALUES WITHIN BOUNDS");
+		ROS_INFO("NODE TEST PASSED: ALL PARAMTERS FOUND");
 	}
 	else
 	{
-		ROS_WARN("NODE TEST FAILED: Some values not found or not within bounds");
+		ROS_WARN("NODE TEST FAILED: Something didn't work out right");
 	}
-
-    ros::Subscriber sub = nh.subscribe("scan_cloud", 1, cloudCallback);
-
-    ros::Publisher pubCloud = nh.advertise<sensor_msgs::PointCloud2> ("point_cloud", 1);
-    pubCloud_ptr = &pubCloud;
 
     ros::spin();
     return 0;

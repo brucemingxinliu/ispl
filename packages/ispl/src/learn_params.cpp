@@ -22,8 +22,6 @@ float p_hit()
 
 }
 
-
-
 int learn_intrinsic_parameters()
 {
 	bool converged = false;
@@ -73,30 +71,41 @@ int main(int argc, char **argv)
 {
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
+    ROS_INFO("Starting ~ node handle");
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
 
+    bool test_active = true;
+
+    ROS_INFO("Subscribing to scan-based map and wobbler point cloud");
+
+    ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, mapCB);
     ros::Subscriber point_cloud_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
-    ros::Subscriber map_sub = nh.subscribe("/ispl/map", 1, mapCB);
+
+    if(test_active == true)
+    {
+
+    }
 
     //learn_intrinsic_parameters();
 
     // Create sensor params, but should come from the algorithm 
-    float x_dist = 1.55;
-    float y_dist = 5.62;
-    float z_dist = -0.66;
-    float roll = 0.05;
-    float pitch = 1.15;
-    float yaw = -0.1511;
+    float z_hit = 1.55;
+    float z_short = 5.62;
+    float z_max = 0.66;
+    float z_rand = 0.05;
+    float sig_hit = 1.15;
+    float lam_short = 0.1511;
 
     // Publish found parameters
-    nh_ptr->setParam("/ispl/x_dist", x_dist);
-    nh_ptr->setParam("/ispl/y_dist", y_dist);
-    nh_ptr->setParam("/ispl/z_dist", z_dist);
-    nh_ptr->setParam("/ispl/roll", roll);
-    nh_ptr->setParam("/ispl/pitch", pitch);
-    nh_ptr->setParam("/ispl/yaw", yaw);
+    nh_ptr->setParam("/ispl/z_hit", z_hit);
+    nh_ptr->setParam("/ispl/z_short", z_short);
+    nh_ptr->setParam("/ispl/z_max", z_max);
+    nh_ptr->setParam("/ispl/z_rand", z_rand);
+    nh_ptr->setParam("/ispl/sig_hit", sig_hit);
+    nh_ptr->setParam("/ispl/lam_short", lam_short);
 
+    // Tell test node that we are done
     nh_ptr->setParam("/calibration_done", true);
     
     ros::spin();
