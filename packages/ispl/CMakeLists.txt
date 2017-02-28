@@ -31,7 +31,8 @@ catkin_simple()
 
 # Executables: uncomment the following and edit arguments to compile new nodes
 # may add more of these lines for more nodes from the same package
-# cs_add_executable(example src/example.cpp)
+cs_add_executable(find_params src/find_params.cpp)
+cs_add_executable(test_ispl src/test_ispl.cpp)
 
 #the following is required, if desire to link a node in this package with a library created in this same package
 # edit the arguments to reference the named node and named library within this package

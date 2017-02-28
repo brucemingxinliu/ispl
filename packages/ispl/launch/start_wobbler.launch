@@ -1,14 +1,11 @@
 <launch> 
-
 	<!-- Start Hokuyo LIDAR wobbler data collection for hokuyo -->
-	<!-- NOTE: Swap around ttyACM0 and ttyACM1 if I figure out the front/rear assignment is backwards! -->
 	<node pkg= "hokuyo_node"  type="hokuyo_node" name= "front_hokuyo_driver" args="_port:=/dev/ttyACM0" > 
 	</node>
 
-	<node pkg= "ispl"  type="ispl" name= "ispl" > 
+	<node pkg= "ispl"  type="learn_params" name= "learn_params" >
 	</node>
 
 	<node pkg= "ispl"  type="test_ispl" name= "test_ispl" > 
 	</node>
-
 </launch>
