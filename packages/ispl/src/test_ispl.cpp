@@ -15,13 +15,12 @@ bool is_reasonable_param(float sensor_param_val)
     // Liable to change
     if((sensor_param_val < 100000) && (sensor_param_val > 0))
     {
-        ROS_INFO("%f sounds good", sensor_param_val);
         return true;  
     }
     else
     {
         ROS_INFO("%f is not a reasonable param value.", sensor_param_val);
-        return true;  
+        return false;  
     }
 }
  
@@ -32,7 +31,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
 
-    ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm TEST module");
+    ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm test module");
 
     // Wait for the learn_params node to finish
     while(ros::ok())
@@ -43,7 +42,7 @@ int main(int argc, char **argv)
     	}
     	else
     	{
-  			ROS_INFO("Waiting for learning to complete");
+  			//ROS_INFO("Waiting for learning to complete");
     	}
     }
 
@@ -72,14 +71,17 @@ int main(int argc, char **argv)
             is_reasonable_param(sig_hit) &&
             is_reasonable_param(lam_short))
         {
-            node_level_tests_passed = true;
+            if( nh_ptr->hasParam("/ispl/success"))
+            {
+                node_level_tests_passed = true;
+            }
         }
     }
 
     // Final test line report
 	if(node_level_tests_passed == true)
 	{
-		ROS_INFO("NODE TEST PASSED: ALL PARAMTERS FOUND");
+		ROS_INFO("NODE TEST PASSED: All tests complete");
 	}
 	else
 	{

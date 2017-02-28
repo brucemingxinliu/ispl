@@ -62,7 +62,7 @@ bool g_scan_received = false;
 void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 {
 	g_cloud_received = true;
-	get_cloud_slice(cloud_holder);
+	//get_cloud_slice(cloud_holder);
 }
 
 void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
@@ -73,16 +73,53 @@ void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 bool waitForSubs()
 {
 	int count = 0;
-	int time_to_wait = 2;
-	while(count <= time_to_wait)
+	int time_to_wait = 5;
+	ros::Rate count_rate(1);
+
+	while(count < time_to_wait)
 	{
-		if(g_cloud_received == true && g_scan_received == true)
+		if((g_cloud_received == true) && (g_scan_received == true))
 		{
 			return true;
 		}
-		ros::Duration(2).sleep();
+		ros::spinOnce();
+		count_rate.sleep();
 		count++;
 	}
+	return false;
+}
+
+class SensorModel
+{
+public:
+	bool createModel();
+	bool setLearningData();
+	bool setLocation();
+	bool setMap();
+
+private:
+
+
+
+};
+
+bool SensorModel::createModel()
+{
+	return false;
+}
+
+bool SensorModel::setLearningData()
+{
+	return false;
+}
+
+bool SensorModel::setLocation()
+{
+	return false;
+}
+
+bool SensorModel::setMap()
+{
 	return false;
 }
 
@@ -107,10 +144,18 @@ int main(int argc, char **argv)
 
     if(test_active == true)
     {
-    	if(!waitForSubs() == true)
+    	if(waitForSubs() == false)
     	{
     		ROS_WARN("Didn't receive any publications!");
     		test_passed = false;
+    	}
+
+    	SensorModel OurSensor;
+
+    	if(OurSensor.createModel() == false)
+    	{
+    		ROS_WARN("Failed to model sensor!");
+    		test_passed = false;    	
     	}
     }
 
@@ -121,6 +166,7 @@ int main(int argc, char **argv)
     else
     {
     	ROS_INFO("FUNCTION TEST PASSED");
+    	nh_ptr->setParam("/ispl/success", true);
     }
 
     //learn_intrinsic_parameters();
