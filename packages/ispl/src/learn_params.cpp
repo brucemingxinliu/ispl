@@ -50,21 +50,40 @@ void get_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 		if ((point_cloud->points[i].z < max_z_plane) && (point_cloud->points[i].z > min_z_plane))
 		{
 			level_cloud.push_back(point_cloud->points[i]);
-			ROS_INFO("HEY");
 		}
 
 	}
 
 }
 
+bool g_cloud_received = false;
+bool g_scan_received = false;
+
 void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 {
+	g_cloud_received = true;
 	get_cloud_slice(cloud_holder);
 }
 
-void mapCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
+void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 {
+	g_scan_received = true;
+}
 
+bool waitForSubs()
+{
+	int count = 0;
+	int time_to_wait = 2;
+	while(count <= time_to_wait)
+	{
+		if(g_cloud_received == true && g_scan_received == true)
+		{
+			return true;
+		}
+		ros::Duration(2).sleep();
+		count++;
+	}
+	return false;
 }
 
 int main(int argc, char **argv)
@@ -76,15 +95,32 @@ int main(int argc, char **argv)
     nh_ptr = &nh;
 
     bool test_active = true;
+    bool test_passed = true;
+
+    g_scan_received = false;
+    g_cloud_received = false;
 
     ROS_INFO("Subscribing to scan-based map and wobbler point cloud");
 
-    ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, mapCB);
+    ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, scanCB);
     ros::Subscriber point_cloud_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
 
     if(test_active == true)
     {
+    	if(!waitForSubs() == true)
+    	{
+    		ROS_WARN("Didn't receive any publications!");
+    		test_passed = false;
+    	}
+    }
 
+    if(test_passed == false)
+    {
+    	ROS_WARN("FUNCTION TEST FAILED: Something is borked");
+    }
+    else
+    {
+    	ROS_INFO("FUNCTION TEST PASSED");
     }
 
     //learn_intrinsic_parameters();
@@ -106,7 +142,7 @@ int main(int argc, char **argv)
     nh_ptr->setParam("/ispl/lam_short", lam_short);
 
     // Tell test node that we are done
-    nh_ptr->setParam("/calibration_done", true);
+    nh_ptr->setParam("/learning_done", true);
     
     ros::spin();
     return 0;

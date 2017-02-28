@@ -6,7 +6,7 @@
 
 	<!-- ACTIVATE THIS NODE FOR SW -->
 	<!-- Start point cloud rosbag play to take place of Hokuyo wobbler -->
-	<node pkg="rosbag" type="play" name="rosbag_babs_scan" args="/home/mordoc/ispl_ws/src/ispl/bags/qbs.bag" output="screen">\
+	<node pkg="rosbag" type="play" name="rosbag_babs_scan" args="/home/mordoc/ispl_ws/src/ispl/bags/qbs.bag" >\
 		<remap from="/wobbler_3d_cloud" to="/ispl/point_cloud" />
 		<remap from="/sensor_msgs/LaserScan" to="/ispl/scan_map" />
 	</node>

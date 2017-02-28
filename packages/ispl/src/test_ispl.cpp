@@ -1,3 +1,4 @@
+
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>
 #include <std_msgs/Float32.h>
@@ -8,8 +9,10 @@
 
 ros::NodeHandle * nh_ptr;
 
+// This is a test function for an ISPl paramter value to check that it is a reasonable value
 bool is_reasonable_param(float sensor_param_val)
 {
+    // Liable to change
     if((sensor_param_val < 100000) && (sensor_param_val > 0))
     {
         ROS_INFO("%f sounds good", sensor_param_val);
@@ -29,13 +32,12 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
 
-    bool node_level_tests_passed = false;
-
     ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm TEST module");
 
+    // Wait for the learn_params node to finish
     while(ros::ok())
     {
-    	if(nh_ptr->hasParam("/calibration_done"))
+    	if(nh_ptr->hasParam("/learning_done"))
     	{
     		break;
     	}
@@ -45,6 +47,7 @@ int main(int argc, char **argv)
     	}
     }
 
+    // These represent the calculated output parameter values by the node
     float z_hit;;
     float z_short;
     float z_max;
@@ -52,6 +55,9 @@ int main(int argc, char **argv)
     float sig_hit;
     float lam_short;
 
+    bool node_level_tests_passed = false;
+
+    // Retrieve these output parameter values from the param server, and check validity
     if (nh_ptr->getParam("/ispl/z_hit", z_hit) &&
         nh_ptr->getParam("/ispl/z_short", z_short) &&
         nh_ptr->getParam("/ispl/z_max", z_max) &&
@@ -70,6 +76,7 @@ int main(int argc, char **argv)
         }
     }
 
+    // Final test line report
 	if(node_level_tests_passed == true)
 	{
 		ROS_INFO("NODE TEST PASSED: ALL PARAMTERS FOUND");
