@@ -26,8 +26,6 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
-    // That node should compare a set of SICK and wobbler point clouds (2D) from topics and give transform parameters on the pserver, and identify the lengths of test fixture walls
-    // Test fixture: \_/ , with lidars looking at it from "below"
 
     ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm TEST module");
 
