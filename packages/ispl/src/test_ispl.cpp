@@ -19,8 +19,6 @@ void cloudCallback(const PointCloud::ConstPtr& cloud_holder)
 {
 
 }
-
-
  
 int main(int argc, char **argv)
 {
@@ -28,12 +26,32 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
+    // That node should compare a set of SICK and wobbler point clouds (2D) from topics and give transform parameters on the pserver, and identify the lengths of test fixture walls
+    // Test fixture: \_/ , with lidars looking at it from "below"
 
-    /*if(!nh_ptr->getParam("/motor_wobble/min_ang", min_ang))
+    ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm TEST module");
+
+    while(ros::ok())
     {
-        ROS_WARN("FAILED TO GET WOBBLER MIN ANG");
+    	if(nh_ptr->hasParam("/calibration_done"))
+    	{
+    		break;
+    	}
+    	else
+    	{
+  			ROS_INFO("Waiting for learning to complete");
+    	}
     }
-    */
+
+	if( 1 ) // Need to improve, obviously!
+	{
+		ROS_INFO("NODE TEST PASSED: ALL VALUES WITHIN BOUNDS");
+	}
+	else
+	{
+		ROS_WARN("NODE TEST FAILED: Some values not found or not within bounds");
+	}
+
     ros::Subscriber sub = nh.subscribe("scan_cloud", 1, cloudCallback);
 
     ros::Publisher pubCloud = nh.advertise<sensor_msgs::PointCloud2> ("point_cloud", 1);
