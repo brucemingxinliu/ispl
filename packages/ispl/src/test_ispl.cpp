@@ -7,7 +7,11 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
+
 ros::NodeHandle * nh_ptr;
+
+bool g_received_measurements;
 
 // This is a test function for an ISPl paramter value to check that it is a reasonable value
 bool is_reasonable_param(float sensor_param_val)
@@ -23,6 +27,11 @@ bool is_reasonable_param(float sensor_param_val)
         return false;  
     }
 }
+
+void cloudCB(const PointCloud::ConstPtr& point_cloud)
+{
+    g_received_measurements = true;
+}
  
 int main(int argc, char **argv)
 {
@@ -31,6 +40,10 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
 
+    g_received_measurements = false;
+
+    ros::Subscriber meas_sub = nh.subscribe("/ispl/meas_pc", 1, cloudCB);
+
     ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm test module");
 
     // Wait for the learn_params node to finish
@@ -38,12 +51,9 @@ int main(int argc, char **argv)
     {
     	if(nh_ptr->hasParam("/learning_done"))
     	{
-    		break;
+            break;
     	}
-    	else
-    	{
-  			//ROS_INFO("Waiting for learning to complete");
-    	}
+        ros::spinOnce();
     }
 
     // These represent the calculated output parameter values by the node
@@ -54,7 +64,7 @@ int main(int argc, char **argv)
     float sig_hit;
     float lam_short;
 
-    bool node_level_tests_passed = false;
+    int node_level_tests_failed = 0;
 
     // Retrieve these output parameter values from the param server, and check validity
     if (nh_ptr->getParam("/ispl/z_hit", z_hit) &&
@@ -71,21 +81,39 @@ int main(int argc, char **argv)
             is_reasonable_param(sig_hit) &&
             is_reasonable_param(lam_short))
         {
-            if( nh_ptr->hasParam("/ispl/success"))
+            if(nh_ptr->hasParam("/ispl/success"))
             {
-                node_level_tests_passed = true;
+
+            }
+            else
+            {
+                node_level_tests_failed++;
             }
         }
+        else
+        {
+            node_level_tests_failed++;
+        }
+    }
+    else
+    {
+        node_level_tests_failed++;
+    }
+
+    if (g_received_measurements == false)
+    {
+        node_level_tests_failed++;
+        ROS_WARN("Never received published point cloud of measurements!");
     }
 
     // Final test line report
-	if(node_level_tests_passed == true)
+	if(node_level_tests_failed == 0)
 	{
 		ROS_INFO("NODE TEST PASSED: All tests complete");
 	}
 	else
 	{
-		ROS_WARN("NODE TEST FAILED: Something didn't work out right");
+		ROS_WARN("NODE TESTS FAILED = %d", node_level_tests_failed);
 	}
 
     ros::spin();

@@ -6,20 +6,20 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
-#define PI 3.14159265
-
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
 ros::NodeHandle * nh_ptr;
 
+PointCloud g_point_cloud_data;
+
+ros::Publisher * pc_pub_ptr;
+
 bool test_p_hit()
 {
-
 }
 
 float p_hit()
 {
-
 }
 
 int learn_intrinsic_parameters()
@@ -30,30 +30,26 @@ int learn_intrinsic_parameters()
 	do
 	{
 
-
 	}
 	while(converged == false);
 
 	return 0;
 }
 
-void get_cloud_slice(const PointCloud::ConstPtr& point_cloud)
+void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
 
-	float min_z_plane = 0.2;
-	float max_z_plane = 0.3;
+	float min_z_plane = 0.05;
+	float max_z_plane = 0.15;
 	
-	PointCloud level_cloud;
 	for(int i = 0; i < cloud_size; i++)
 	{
 		if ((point_cloud->points[i].z < max_z_plane) && (point_cloud->points[i].z > min_z_plane))
 		{
-			level_cloud.push_back(point_cloud->points[i]);
+			g_point_cloud_data.push_back(point_cloud->points[i]);
 		}
-
 	}
-
 }
 
 bool g_cloud_received = false;
@@ -62,7 +58,7 @@ bool g_scan_received = false;
 void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 {
 	g_cloud_received = true;
-	//get_cloud_slice(cloud_holder);
+	sort_cloud_slice(cloud_holder);
 }
 
 void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
@@ -92,42 +88,55 @@ bool waitForSubs()
 class SensorModel
 {
 public:
-	bool createModel();
+	bool createModel(PointCloud*);
 	bool setLearningData();
 	bool setLocation();
 	bool setMap();
-
 private:
-
-
 
 };
 
-bool SensorModel::createModel()
+bool SensorModel::createModel(PointCloud * point_cloud)
 {
-	return false;
+	int cloud_size = point_cloud->points.size();
+
+	ROS_INFO("Modeling sensor based on %d points", cloud_size);
+	for(int i = 0; i < cloud_size; i++)
+	{
+		//ROS_INFO("Point: x=%f, y=%f, z=%f.", point_cloud->points[i].x,point_cloud->points[i].y, point_cloud->points[i].z);
+	}
+
+    point_cloud->header.frame_id = "map";
+    pc_pub_ptr->publish(*point_cloud);
+
+	setLearningData();
+
+	setLocation();
+	
+	setMap();
+
+	return true;
 }
 
 bool SensorModel::setLearningData()
 {
-	return false;
+	return true;
 }
 
 bool SensorModel::setLocation()
 {
-	return false;
+	return true;
 }
 
 bool SensorModel::setMap()
 {
-	return false;
+	return true;
 }
 
 int main(int argc, char **argv)
 {
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
-    ROS_INFO("Starting ~ node handle");
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
 
@@ -137,10 +146,11 @@ int main(int argc, char **argv)
     g_scan_received = false;
     g_cloud_received = false;
 
-    ROS_INFO("Subscribing to scan-based map and wobbler point cloud");
-
     ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, scanCB);
     ros::Subscriber point_cloud_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
+
+ 	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
+    pc_pub_ptr = &pc_pub;
 
     if(test_active == true)
     {
@@ -150,9 +160,9 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	SensorModel OurSensor;
+    	SensorModel ourSensor;
 
-    	if(OurSensor.createModel() == false)
+    	if(ourSensor.createModel(&g_point_cloud_data) == false)
     	{
     		ROS_WARN("Failed to model sensor!");
     		test_passed = false;    	
@@ -168,8 +178,6 @@ int main(int argc, char **argv)
     	ROS_INFO("FUNCTION TEST PASSED");
     	nh_ptr->setParam("/ispl/success", true);
     }
-
-    //learn_intrinsic_parameters();
 
     // Create sensor params, but should come from the algorithm 
     float z_hit = 1.55;
