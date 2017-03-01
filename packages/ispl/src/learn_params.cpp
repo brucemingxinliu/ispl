@@ -22,20 +22,6 @@ float p_hit()
 {
 }
 
-int learn_intrinsic_parameters()
-{
-	bool converged = false;
-
-	// Loop following until convergence criteria is met
-	do
-	{
-
-	}
-	while(converged == false);
-
-	return 0;
-}
-
 void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
@@ -89,9 +75,11 @@ class SensorModel
 {
 public:
 	bool createModel(PointCloud*);
+
 	bool setLearningData();
 	bool setLocation();
 	bool setMap();
+	bool learnParameters(PointCloud*);
 private:
 
 };
@@ -112,10 +100,10 @@ bool SensorModel::createModel(PointCloud * point_cloud)
 	setLearningData();
 
 	setLocation();
-	
+
 	setMap();
 
-	return true;
+	return learnParameters(point_cloud);
 }
 
 bool SensorModel::setLearningData()
@@ -131,6 +119,30 @@ bool SensorModel::setLocation()
 bool SensorModel::setMap()
 {
 	return true;
+}
+
+bool SensorModel::learnParameters(PointCloud * Z)
+{
+	bool converged = false;
+	int i = 0;
+	int max_i = 50;
+
+	// Loop following until convergence criteria is met
+	do
+	{
+
+		i++;
+	}
+	while((converged == false) && (i <= max_i));
+
+	if (i != max_i)
+	{
+		return true;
+	}
+	else
+	{
+		return false;	
+	}
 }
 
 int main(int argc, char **argv)
@@ -160,6 +172,7 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
+    	// Instantiate a sensor model
     	SensorModel ourSensor;
 
     	if(ourSensor.createModel(&g_point_cloud_data) == false)
@@ -197,7 +210,6 @@ int main(int argc, char **argv)
 
     // Tell test node that we are done
     nh_ptr->setParam("/learning_done", true);
-    
-    ros::spin();
+   
     return 0;
 }

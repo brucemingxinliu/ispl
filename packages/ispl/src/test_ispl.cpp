@@ -116,6 +116,5 @@ int main(int argc, char **argv)
 		ROS_WARN("NODE TESTS FAILED = %d", node_level_tests_failed);
 	}
 
-    ros::spin();
     return 0;
 }
