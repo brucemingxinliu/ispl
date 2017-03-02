@@ -6,11 +6,14 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
+// Define shorthand names for PCL points and clouds
+typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-ros::NodeHandle * nh_ptr;
-
+// Point cloud of sensor measurements to make model off of
 PointCloud g_point_cloud_data;
+
+ros::NodeHandle * nh_ptr;
 
 ros::Publisher * pc_pub_ptr;
 
@@ -71,16 +74,24 @@ bool waitForSubs()
 	return false;
 }
 
+class MapFixture
+{
+public:
+	Point sensor_origin;
+	Point corner1;
+	Point corner2;
+	Point corner3;
+	Point corner4;
+};
+
 class SensorModel
 {
 public:
 	bool createModel(PointCloud*);
 
-	bool setLearningData();
-	bool setLocation();
-	bool setMap();
 	bool learnParameters(PointCloud*);
 private:
+	
 
 };
 
@@ -94,31 +105,11 @@ bool SensorModel::createModel(PointCloud * point_cloud)
 		//ROS_INFO("Point: x=%f, y=%f, z=%f.", point_cloud->points[i].x,point_cloud->points[i].y, point_cloud->points[i].z);
 	}
 
+	// Publish point cloud for reference by other nodes
     point_cloud->header.frame_id = "map";
     pc_pub_ptr->publish(*point_cloud);
 
-	setLearningData();
-
-	setLocation();
-
-	setMap();
-
 	return learnParameters(point_cloud);
-}
-
-bool SensorModel::setLearningData()
-{
-	return true;
-}
-
-bool SensorModel::setLocation()
-{
-	return true;
-}
-
-bool SensorModel::setMap()
-{
-	return true;
 }
 
 bool SensorModel::learnParameters(PointCloud * Z)
