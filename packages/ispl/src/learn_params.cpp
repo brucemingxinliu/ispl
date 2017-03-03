@@ -125,41 +125,64 @@ bool MapFixture::setCorners(Point corner1,
 	ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,
 														origin_corner.x,origin_corner.y,origin_corner.z);
 
-	// Define 
+	// Define a vector from origin on plane to a point on the plane
 	Point first_vector(second_corner.x - origin_corner.x, 
 						second_corner.y - origin_corner.y,
 						second_corner.z - origin_corner.z);
 
 
+
 	ROS_INFO("TEST2: point(%f,%f,%f) x point(%f,%f,%f)...", third_corner.x,third_corner.y,third_corner.z,
 														origin_corner.x,origin_corner.y,origin_corner.z);
 
-
+	// Define another vector from origin on plane to another point on plane
 	Point second_vector(third_corner.x - origin_corner.x, 
 						third_corner.y - origin_corner.y,
 						third_corner.z - origin_corner.z);
 
+	// Calculate the (normalized) cross product of the two vectors, which will give us
+	//   three of the parameters of the plane
 	Point plane_normal = unitCrossProduct(first_vector, second_vector);
 
+	// The fourth parameter of the plane is a function of other already-found parameters
+	//   Think of it like an 'offset' value that is dependent on the rest of the plane parameters
 	float plane_parameter = - (plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
-	
+
+	return true;
+}
+
+Point MapFixture::rayTrace(Point * origin, Point * rayPoint)
+{
+	// TRENT WORK HERE ENXT
+
+	// NAMEpsaces, finishing variables, and math work out
+	ROS_WARN("RAY TRACE NOT YET DONE TOTALLY");
+
+	float x1 = rayPoint.x;
+	float y1 = rayPoint.y;
+	float z1 = rayPoint.z;
+
+	// a, b, c?
+
+	float A = plane_normal.x;
+	float B = plane_normal.y;
+	float C = plane_normal.z;
 	float D = plane_parameter;
 
 	float x_top = a*(A*x1 + B*y1 + C*z1 + D);
 	float x_bot = A*a + B*b + C*c;
 	float intersection_x = x1 - (x_top/x_bot);
 
-	//y = 
+	float y_top;
+	float y_bot;
+	float intersection_y = y1 - (y_top/y_bot);
 
-	//z = 
+	float z_top;
+	float z_bot;
+	float intersection_z;
 
 	Point intersection_point(intersection_x, intersection_y, intersection_z);
-	return true;
-}
 
-Point MapFixture::rayTrace(Point * origin, Point * rayPoint)
-{
-	ROS_WARN("RAY TRACE NOT YET IMPLEMENTED");
 	return Point(0,0,0);
 }
 
@@ -268,6 +291,8 @@ int main(int argc, char **argv)
     	{
     		ROS_WARN("FAILED TO SET CORNERS ON MAP FIXTURE");
     	}
+
+    	// NOW, TRENT, VALIDATE YOUR SET CORNERS FUNCTION NUMERICALLY
 
     	Point sensor_origin(0,0,0);
 
