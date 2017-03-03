@@ -5,6 +5,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/features/feature.h>
 
 // Define shorthand names for PCL points and clouds
 typedef pcl::PointXYZ Point;
@@ -77,25 +78,104 @@ bool waitForSubs()
 class MapFixture
 {
 public:
-	Point sensor_origin;
-	Point corner1;
-	Point corner2;
-	Point corner3;
-	Point corner4;
+	bool setCorners(Point, Point, Point, Point);
+
+	Point rayTrace(Point *, Point *);
+
+private:
+
+	// Point from which to conventionally measure things from wrt the plane
+	Point origin_corner;
+	// Other two defining points in the plane
+	Point second_corner;
+	Point third_corner;
+	// Technically superfluous, but can use for numerical self-validation 
+	Point validation_corner;
+
+	Point plane_normal;
+
+	Point unitCrossProduct(Point, Point);
 };
+
+bool MapFixture::setCorners(Point corner1, 
+						Point corner2, 
+						Point corner3, 
+						Point corner4)
+{
+	MapFixture::origin_corner = corner1;
+	MapFixture::second_corner = corner2;
+	MapFixture::third_corner = corner3;
+	MapFixture::validation_corner = corner4;
+
+	// Compute a point at a vector that is normal to the plane, may need later
+	
+	// pcl::computePointNormal(PointCloud(corner1, corner2s));
+
+	ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,
+														origin_corner.x,origin_corner.y,origin_corner.z);
+
+	Point first_point(second_corner.x - origin_corner.x, 
+						second_corner.y - origin_corner.y,
+						second_corner.z - origin_corner.z);
+
+
+	ROS_INFO("TEST2: point(%f,%f,%f) x point(%f,%f,%f)...", third_corner.x,third_corner.y,third_corner.z,
+														origin_corner.x,origin_corner.y,origin_corner.z);
+
+
+	Point second_point(third_corner.x - origin_corner.x, 
+						third_corner.y - origin_corner.y,
+						third_corner.z - origin_corner.z);
+
+	Point plane_normal = unitCrossProduct(first_point, second_point);
+
+	plane_parameter = - (plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
+	
+	//x = 
+
+	//y = 
+
+	//z = 
+	return true;
+}
+
+Point MapFixture::rayTrace(Point * origin, Point * rayPoint)
+{
+
+	ROS_INFO()
+	ROS_WARN("RAY TRACE NOT YET IMPLEMENTED");
+	return Point(0,0,0);
+}
+
+Point MapFixture::unitCrossProduct(Point u, Point v)
+{
+	ROS_INFO("TEST: vector(%f,%f,%f) x vector(%f,%f,%f)...", u.x,u.y,u.z,v.x,v.y,v.z);
+	float a = u.y*v.z - u.z*v.y;
+	float b = u.z*v.x - u.x*v.z;
+	float c = u.x*v.y - u.y*v.x;
+	float length = a*a + b*b + c*c;
+	a = a/length;
+	b = b/length;
+	c = c/length;
+	ROS_INFO("...is (%f,%f,%f)", a, b, c);
+
+	return Point(a,b,c);
+}
 
 class SensorModel
 {
 public:
-	bool createModel(PointCloud*);
+	bool createModel(PointCloud*, MapFixture *, Point *);
 
 	bool learnParameters(PointCloud*);
 private:
-	
+
 
 };
 
-bool SensorModel::createModel(PointCloud * point_cloud)
+bool SensorModel::createModel(PointCloud * point_cloud, 
+								MapFixture * map_plane,
+								Point * origin)
 {
 	int cloud_size = point_cloud->points.size();
 
@@ -150,7 +230,7 @@ int main(int argc, char **argv)
     g_cloud_received = false;
 
     ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, scanCB);
-    ros::Subscriber point_cloud_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
+    ros::Subscriber pc_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
 
  	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
     pc_pub_ptr = &pc_pub;
@@ -166,7 +246,16 @@ int main(int argc, char **argv)
     	// Instantiate a sensor model
     	SensorModel ourSensor;
 
-    	if(ourSensor.createModel(&g_point_cloud_data) == false)
+    	MapFixture ourMap;
+
+    	if(!ourMap.setCorners(Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)))
+    	{
+    		ROS_WARN("FAILED TO SET CORNERS ON MAP FIXTURE");
+    	}
+
+    	Point sensor_origin(0,0,0);
+
+    	if(ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensor_origin) == false)
     	{
     		ROS_WARN("Failed to model sensor!");
     		test_passed = false;    	
