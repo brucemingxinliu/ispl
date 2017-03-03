@@ -97,24 +97,36 @@ private:
 	Point unitCrossProduct(Point, Point);
 };
 
+/*
+Function: MapFixture::setCorners
+
+Input: Four co-planar points that define the "screen" of the test fixture
+Output: Sets various mathematical parameters related to the map fixture setup, returns 'true' if successful
+
+Notes: The four input points should be very approximately co-planar or validation will fail and all bets are off
+		Also, because I am an engineer and not a mathematician, I highly blur the line between what 
+		a "point" is versus a "vector". Deal with it.
+*/
+
 bool MapFixture::setCorners(Point corner1, 
 						Point corner2, 
 						Point corner3, 
 						Point corner4)
 {
+	// Just go ahead and store these points because they define the fixture
+	// This poinnt is the "origin frame" of the plane
 	MapFixture::origin_corner = corner1;
+	// These next two points are needed to define a single plane
 	MapFixture::second_corner = corner2;
 	MapFixture::third_corner = corner3;
+	// Can be used to check our work and check that the user knows what "co-planar" means
 	MapFixture::validation_corner = corner4;
-
-	// Compute a point at a vector that is normal to the plane, may need later
-	
-	// pcl::computePointNormal(PointCloud(corner1, corner2s));
 
 	ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,
 														origin_corner.x,origin_corner.y,origin_corner.z);
 
-	Point first_point(second_corner.x - origin_corner.x, 
+	// Define 
+	Point first_vector(second_corner.x - origin_corner.x, 
 						second_corner.y - origin_corner.y,
 						second_corner.z - origin_corner.z);
 
@@ -123,26 +135,30 @@ bool MapFixture::setCorners(Point corner1,
 														origin_corner.x,origin_corner.y,origin_corner.z);
 
 
-	Point second_point(third_corner.x - origin_corner.x, 
+	Point second_vector(third_corner.x - origin_corner.x, 
 						third_corner.y - origin_corner.y,
 						third_corner.z - origin_corner.z);
 
-	Point plane_normal = unitCrossProduct(first_point, second_point);
+	Point plane_normal = unitCrossProduct(first_vector, second_vector);
 
-	plane_parameter = - (plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
+	float plane_parameter = - (plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
 	
-	//x = 
+	float D = plane_parameter;
+
+	float x_top = a*(A*x1 + B*y1 + C*z1 + D);
+	float x_bot = A*a + B*b + C*c;
+	float intersection_x = x1 - (x_top/x_bot);
 
 	//y = 
 
 	//z = 
+
+	Point intersection_point(intersection_x, intersection_y, intersection_z);
 	return true;
 }
 
 Point MapFixture::rayTrace(Point * origin, Point * rayPoint)
 {
-
-	ROS_INFO()
 	ROS_WARN("RAY TRACE NOT YET IMPLEMENTED");
 	return Point(0,0,0);
 }
