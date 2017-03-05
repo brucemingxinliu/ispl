@@ -80,7 +80,7 @@ class MapFixture
 public:
 	bool setCorners(Point, Point, Point, Point);
 
-	Point rayTrace(Point *, Point *);
+	Point rayTrace(Point, Point);
 
 private:
 
@@ -92,8 +92,12 @@ private:
 	// Technically superfluous, but can use for numerical self-validation 
 	Point validation_corner;
 
+	// This point object represents the vector that is normal to the map fixture's plane
 	Point plane_normal;
+	// Together with the normal, this plane_parameter fully defines the equation of a 3D plane
+	float plane_parameter;
 
+	// Calcultes the unit-length (normalized) cross product between two points, presumably in the plane but not necessarily
 	Point unitCrossProduct(Point, Point);
 };
 
@@ -122,18 +126,14 @@ bool MapFixture::setCorners(Point corner1,
 	// Can be used to check our work and check that the user knows what "co-planar" means
 	MapFixture::validation_corner = corner4;
 
-	ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,
-														origin_corner.x,origin_corner.y,origin_corner.z);
+	//ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
 
 	// Define a vector from origin on plane to a point on the plane
 	Point first_vector(second_corner.x - origin_corner.x, 
 						second_corner.y - origin_corner.y,
 						second_corner.z - origin_corner.z);
 
-
-
-	ROS_INFO("TEST2: point(%f,%f,%f) x point(%f,%f,%f)...", third_corner.x,third_corner.y,third_corner.z,
-														origin_corner.x,origin_corner.y,origin_corner.z);
+	//ROS_INFO("TEST2: point(%f,%f,%f) x point(%f,%f,%f)...", third_corner.x,third_corner.y,third_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
 
 	// Define another vector from origin on plane to another point on plane
 	Point second_vector(third_corner.x - origin_corner.x, 
@@ -142,53 +142,56 @@ bool MapFixture::setCorners(Point corner1,
 
 	// Calculate the (normalized) cross product of the two vectors, which will give us
 	//   three of the parameters of the plane
-	Point plane_normal = unitCrossProduct(first_vector, second_vector);
+	plane_normal = unitCrossProduct(first_vector, second_vector);
 
 	// The fourth parameter of the plane is a function of other already-found parameters
 	//   Think of it like an 'offset' value that is dependent on the rest of the plane parameters
-	float plane_parameter = - (plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
-
+	plane_parameter = -(plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
+	//ROS_INFO("PLANE EQUATION IS: %f, %f, %f, %f", plane_normal.x, plane_normal.y, plane_normal.z, plane_parameter);
 	return true;
 }
 
-Point MapFixture::rayTrace(Point * origin, Point * rayPoint)
+Point MapFixture::rayTrace(Point origin, Point rayPoint)
 {
-	// TRENT WORK HERE ENXT
+	float x1 = origin.x;
+	float y1 = origin.y;
+	float z1 = origin.z;
+	//ROS_INFO("Origin %f %f %f", x1, y1, z1);
 
-	// NAMEpsaces, finishing variables, and math work out
-	ROS_WARN("RAY TRACE NOT YET DONE TOTALLY");
-
-	float x1 = rayPoint.x;
-	float y1 = rayPoint.y;
-	float z1 = rayPoint.z;
-
-	// a, b, c?
+	float a = rayPoint.x;
+	float b = rayPoint.y;
+	float c = rayPoint.z;
+	//ROS_INFO("RayPt %f %f %f", a, b, c);
 
 	float A = plane_normal.x;
 	float B = plane_normal.y;
 	float C = plane_normal.z;
 	float D = plane_parameter;
 
-	float x_top = a*(A*x1 + B*y1 + C*z1 + D);
-	float x_bot = A*a + B*b + C*c;
-	float intersection_x = x1 - (x_top/x_bot);
+	//ROS_INFO("2PLANE EQUATION IS: %f, %f, %f, %f", A, B, C, D);
+	// Equation credit (and reference for those mathematically curious) goes to:
+	//    http://www.ambrsoft.com/TrigoCalc/Plan3D/PlaneLineIntersection_.htm
 
-	float y_top;
-	float y_bot;
-	float intersection_y = y1 - (y_top/y_bot);
+	// This is the main calculation term, which is common to each of the three dimensions intersection points
+	float common_term = (A*x1 + B*y1 + C*z1 + D)/(A*a + B*b + C*c); 
+	// Calculate the intersection point 
+	float intersection_x = x1 - (a*common_term);
+	float intersection_y = y1 - (b*common_term);
+	float intersection_z = z1 - (c*common_term);
+	//ROS_INFO("Common term: %f, Intersection pts: %f, %f, %f", common_term, intersection_x, intersection_y, intersection_z);
 
-	float z_top;
-	float z_bot;
-	float intersection_z;
-
+	// Assemble three floats into a single point object
 	Point intersection_point(intersection_x, intersection_y, intersection_z);
-
-	return Point(0,0,0);
+	if(!std::isfinite(intersection_x) || !std::isfinite(intersection_y) || !std::isfinite(intersection_z))
+	{
+		ROS_WARN("INVALID INTERSECTION POINT: One of the point coordinates was inf or nan!");
+	}
+	return intersection_point;
 }
 
 Point MapFixture::unitCrossProduct(Point u, Point v)
 {
-	ROS_INFO("TEST: vector(%f,%f,%f) x vector(%f,%f,%f)...", u.x,u.y,u.z,v.x,v.y,v.z);
+	//ROS_INFO("TEST: vector(%f,%f,%f) x vector(%f,%f,%f)...", u.x,u.y,u.z,v.x,v.y,v.z);
 	float a = u.y*v.z - u.z*v.y;
 	float b = u.z*v.x - u.x*v.z;
 	float c = u.x*v.y - u.y*v.x;
@@ -196,7 +199,7 @@ Point MapFixture::unitCrossProduct(Point u, Point v)
 	a = a/length;
 	b = b/length;
 	c = c/length;
-	ROS_INFO("...is (%f,%f,%f)", a, b, c);
+	//ROS_INFO("...is (%f,%f,%f)", a, b, c);
 
 	return Point(a,b,c);
 }
@@ -208,8 +211,6 @@ public:
 
 	bool learnParameters(PointCloud*);
 private:
-
-
 };
 
 bool SensorModel::createModel(PointCloud * point_cloud, 
@@ -287,14 +288,32 @@ int main(int argc, char **argv)
 
     	MapFixture ourMap;
 
+    	// Define the sensor as being at the origin of our 'universe'
+    	Point sensor_origin(0,0,0);
+
+    	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
     	if(!ourMap.setCorners(Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)))
     	{
     		ROS_WARN("FAILED TO SET CORNERS ON MAP FIXTURE");
     	}
 
-    	// NOW, TRENT, VALIDATE YOUR SET CORNERS FUNCTION NUMERICALLY
+    	std::vector<Point> test_points;
+    	test_points.push_back(Point(0, 1, 1.5));
+    	test_points.push_back(Point(0.2, 0.1, 1));
+    	test_points.push_back(Point(0.2, 0, 1));
+    	test_points.push_back(Point(-2, 5, 3));
+    	test_points.push_back(Point(-1, 6, 0));
+    	test_points.push_back(Point(0.5, 0, 0.5));
 
-    	Point sensor_origin(0,0,0);
+    	// Iterate through all test cases
+    	for(int i = 0; i < test_points.size(); i++)
+    	{
+    		Point intersection_point = ourMap.rayTrace(sensor_origin, test_points[i]);
+    		
+    		ROS_INFO("The intersection of the line from (%f, %f, %f) to (%f, %f, %f),", 
+    			sensor_origin.x, sensor_origin.y, sensor_origin.z, test_points[i].x, test_points[i].y, test_points[i].z);
+    		ROS_INFO("is located at the point (%f, %f, %f).", intersection_point.x, intersection_point.y,intersection_point.z);
+    	}
 
     	if(ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensor_origin) == false)
     	{
