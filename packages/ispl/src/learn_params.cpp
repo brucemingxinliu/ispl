@@ -1,3 +1,6 @@
+// Sensor Parameter learning node
+// Created Feb 23 2017 by Trent Ziemer
+// Last updated (NEEDS UPDATE) by Trent Ziemer
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>
 #include <std_msgs/Float32.h>
@@ -8,6 +11,7 @@
 #include <pcl/features/feature.h>
 
 #define PI 3.159265
+// Used for numerical integration of Gaussian functions
 #define INTEGRAL_STEPS 1000
 // Define shorthand names for PCL points and clouds
 typedef pcl::PointXYZ Point;
@@ -16,13 +20,17 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 // Point cloud of sensor measurements to make model off of
 PointCloud g_point_cloud_data;
 
+// ROS global pointers 
 ros::NodeHandle * nh_ptr;
-
 ros::Publisher * pc_pub_ptr;
 
+// Variables that help the main program wait until ros topics are received
 bool g_cloud_received = false;
 bool g_scan_received = false;
 
+/*
+
+*/
 void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
@@ -39,6 +47,9 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 	}
 }
 
+/*
+
+*/
 void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 {
 	g_cloud_received = true;
@@ -77,7 +88,7 @@ float normalDistribution(float x, float mean, float variance)
 	return exp_term/(sqrt(2*PI*variance));
 }
 
-// Courtesy helloacm.com, slightly modified
+// Courtesy helloacm.com, slightly modified to integrate a gaussian function with a mean and variance
 float integral(float(*f)(float x1, float x2, float x3), float a, float b, int n, float mean, float variance) {
     float step = (b - a) / n;  // width of each small rectangle
     float area = 0.0;  // signed area
@@ -96,7 +107,6 @@ public:
 	Point rayTrace(Point, Point);
 
 private:
-
 	// Point from which to conventionally measure things from wrt the plane
 	Point origin_corner;
 	// Other two defining points in the plane
@@ -276,7 +286,8 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 
 bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 {
-	PointCloud z1 = *Z;
+	PointCloud data_cloud = *Z;
+	Point sensor_origin = *X;
 	// Convergence learning parameters
 	bool converged = false;
 	int i = 0;
@@ -295,8 +306,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	{
 		for (int k = 0; k < Z->size(); k++)
 		{
-			Point z_k = z1[k];
-			hit = p_hit(z_k, *X, m);
+			hit = p_hit(data_cloud[k], sensor_origin, m);
 			ROS_INFO("P_hit = %f", hit);
 		}
 		i++;
@@ -313,34 +323,59 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	}
 }
 
-float SensorModel::p_hit(Point Zk, Point x, MapFixture * m)
+/*
+Function: vectorLength()
+Input: Two PCL Point objects anywhere in space
+Output: Returns the float value of the magnitude length from one point to the other point 
+Notes: Put garbage in (inf, nan), get garbage out (inf, nan)
+*/
+float vectorLength(Point a, Point b)
 {
-	Point meas_point = m->rayTrace(x, Zk);
+	Point vector(a.x - b.x, a.y - b.y, a.z - b.z);
+	return sqrt((vector.x)*(vector.x) + (vector.y)*(vector.y) + (vector.z)*(vector.z));
+}
 
-	float z_k_star = sqrt((meas_point.x)*(meas_point.x) + (meas_point.y)*(meas_point.y) 
-					+ (meas_point.z)*(meas_point.z));
+/*
+Function: SensorModel::p_hit
+Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
+Output: Returns the probability that the measurement specified actually hit the location specified by the sensor/map geometry, given a normal noise distribution
+Notes: Calls for sig_hit and z_max, within the SensorModel instantiation object
+*/
+float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
+{
+	// Ray trace from the origin to the measurement point to find where it intersects the map
+	// This point is the location of where the meas_point 'should' have been
+	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
 
-	float z_k = sqrt((Zk.x)*(Zk.x) + (Zk.y)*(Zk.y) 
-					+ (Zk.z)*(Zk.z));
+	// Compute the magnitude distance from the sensor to the measurment point
+	float z_k = vectorLength(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the intersection point
+	float z_k_star = vectorLength(sensor_origin, intersection_point);
 
 	if(!std::isfinite(z_k_star))
 	{
-		ROS_WARN("P_HIT reports that the measurement point doesn't intersect plane, returning 0!");
-		return 0;	
+		ROS_WARN("P_HIT reports that the measurement point doesn't intersect the map plane, returning 0!");
+		return 0;
 	}
 	else
 	{
-		ROS_INFO("z_k_star = %f", z_k_star);
+		// Compute the total area under the normal distribution curve
 		float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float eta = 1/integrated_normalizer;
-		ROS_INFO("P_hit normalization constant ETA is %f", eta);
+
 		float p_hit = eta*normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
-		ROS_INFO("Measurement: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
-		ROS_INFO("M")
+		/*ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+		ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
+		ROS_INFO("Distance to measured point z_k = %f", z_k);
+		ROS_INFO("Distacne to intersection point z_k_star = %f", z_k_star);
+		ROS_INFO("P_hit normalization constant ETA is %f", eta);
+		ROS_INFO("P_hit is %f", p_hit);*/
 		return p_hit;
 	}
 }
 
+///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
     ros::init(argc,argv,"learn_intrinsic_parameters");
