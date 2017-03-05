@@ -20,6 +20,9 @@ ros::NodeHandle * nh_ptr;
 
 ros::Publisher * pc_pub_ptr;
 
+bool g_cloud_received = false;
+bool g_scan_received = false;
+
 void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
@@ -35,9 +38,6 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 		}
 	}
 }
-
-bool g_cloud_received = false;
-bool g_scan_received = false;
 
 void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 {
@@ -69,7 +69,7 @@ bool waitForSubs()
 	return false;
 }
 
-// MATHEMATICAL: NORMAL DISTRIBUTION
+/////////////////////           MATHEMATICS FUNCTIONS           ////////////////
 float normalDistribution(float x, float mean, float variance)
 {
 	float exp_term = exp(-(x - mean)*(x - mean)/(2*variance));
@@ -77,16 +77,17 @@ float normalDistribution(float x, float mean, float variance)
 	return exp_term/(sqrt(2*PI*variance));
 }
 
-// Courtesy helloacm.com
-float integral(float(*f)(float x), float a, float b, int n) {
+// Courtesy helloacm.com, slightly modified
+float integral(float(*f)(float x1, float x2, float x3), float a, float b, int n, float mean, float variance) {
     float step = (b - a) / n;  // width of each small rectangle
     float area = 0.0;  // signed area
     for (int i = 0; i < n; i ++) {
-        area += f(a + (i + 0.5) * step) * step; // sum up each small rectangle
+        area += f(a + (i + 0.5) * step, mean, variance) * step; // sum up each small rectangle
     }
     return area;
 }
 
+/////////////////////////////          MAP FIXTURE       /////////////////////
 class MapFixture
 {
 public:
@@ -216,6 +217,7 @@ Point MapFixture::unitCrossProduct(Point u, Point v)
 	return Point(a,b,c);
 }
 
+/////////////////////////////      SENSOR MODEL       /////////////////////////
 class SensorModel
 {
 public:
@@ -280,13 +282,13 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	int i = 0;
 	int max_i = 50;
 
-	// ASSUME for now
+	// ASSUME for now. This is the intrinsic noise parameter of the meas model
 	sig_hit = 0.2;
 
 	// P_hit
 	float hit;
 	
-	// Normalization value
+	// Overall normalization value
 	float eta;
 	// Loop following until convergence criteria is met or we try to many times
 	do
@@ -323,17 +325,19 @@ float SensorModel::p_hit(Point Zk, Point x, MapFixture * m)
 
 	if(!std::isfinite(z_k_star))
 	{
-		ROS_WARN("P_HIT reports that the measurement point doesn't intersect plane!");
+		ROS_WARN("P_HIT reports that the measurement point doesn't intersect plane, returning 0!");
 		return 0;	
 	}
 	else
 	{
 		ROS_INFO("z_k_star = %f", z_k_star);
-		float normalizer = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
-		float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS);
+		float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float eta = 1/integrated_normalizer;
 		ROS_INFO("P_hit normalization constant ETA is %f", eta);
-		return 0;
+		float p_hit = eta*normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
+		ROS_INFO("Measurement: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+		ROS_INFO("M")
+		return p_hit;
 	}
 }
 
