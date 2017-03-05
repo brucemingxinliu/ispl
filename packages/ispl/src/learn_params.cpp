@@ -291,7 +291,8 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// Convergence learning parameters
 	bool converged = false;
 	int i = 0;
-	int max_i = 50;
+	// Make maybe 50 later?
+	int max_i = 1;
 
 	// ASSUME for now. This is the intrinsic noise parameter of the meas model
 	sig_hit = 0.2;
@@ -307,11 +308,11 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		for (int k = 0; k < Z->size(); k++)
 		{
 			hit = p_hit(data_cloud[k], sensor_origin, m);
-			ROS_INFO("P_hit = %f", hit);
+			//ROS_INFO("P_hit = %f", hit);
 		}
 		i++;
 	}
-	while((converged == false) && (i <= max_i));
+	while((converged == false) && (i < max_i));
 
 	if (i != max_i)
 	{
@@ -363,14 +364,29 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 		// Compute the total area under the normal distribution curve
 		float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float eta = 1/integrated_normalizer;
+		float nd = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
+		float p_hit;
+		if(!std::isfinite(eta))
+		{
+			p_hit = 0;
+		}
+		else
+		{
+			p_hit = eta*nd;
+		}
 
-		float p_hit = eta*normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
-		/*ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
-		ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
-		ROS_INFO("Distance to measured point z_k = %f", z_k);
-		ROS_INFO("Distacne to intersection point z_k_star = %f", z_k_star);
-		ROS_INFO("P_hit normalization constant ETA is %f", eta);
-		ROS_INFO("P_hit is %f", p_hit);*/
+		if(1)//!std::isfinite(p_hit))
+		{
+			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
+			ROS_INFO("Distance to measured point z_k = %f", z_k);
+			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
+			ROS_INFO("Sig_hit = %f   z_max = %f", sig_hit, z_max);
+			ROS_INFO("integrated normalizer = %f", integrated_normalizer);
+			ROS_INFO("eta is %f", eta);
+			ROS_INFO("normalDist is %f", nd);
+			ROS_INFO("P_hit is %f \n", p_hit);
+		}
 		return p_hit;
 	}
 }
@@ -444,6 +460,9 @@ int main(int argc, char **argv)
     		ROS_WARN("Failed to model sensor!");
     		test_passed = false;    	
     	}
+
+    	// Test normal dist function
+    	//for(int i = 0; i < )
     }
 
     // Check this-node functional testing and report to user
