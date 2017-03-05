@@ -7,6 +7,8 @@
 #include <pcl/point_types.h>
 #include <pcl/features/feature.h>
 
+#define PI 3.159265
+#define INTEGRAL_STEPS 1000
 // Define shorthand names for PCL points and clouds
 typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -17,14 +19,6 @@ PointCloud g_point_cloud_data;
 ros::NodeHandle * nh_ptr;
 
 ros::Publisher * pc_pub_ptr;
-
-bool test_p_hit()
-{
-}
-
-float p_hit()
-{
-}
 
 void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
@@ -73,6 +67,24 @@ bool waitForSubs()
 		count++;
 	}
 	return false;
+}
+
+// MATHEMATICAL: NORMAL DISTRIBUTION
+float normalDistribution(float x, float mean, float variance)
+{
+	float exp_term = exp(-(x - mean)*(x - mean)/(2*variance));
+
+	return exp_term/(sqrt(2*PI*variance));
+}
+
+// Courtesy helloacm.com
+float integral(float(*f)(float x), float a, float b, int n) {
+    float step = (b - a) / n;  // width of each small rectangle
+    float area = 0.0;  // signed area
+    for (int i = 0; i < n; i ++) {
+        area += f(a + (i + 0.5) * step) * step; // sum up each small rectangle
+    }
+    return area;
 }
 
 class MapFixture
@@ -208,9 +220,13 @@ class SensorModel
 {
 public:
 	bool createModel(PointCloud*, MapFixture *, Point *);
-
-	bool learnParameters(PointCloud*);
 private:
+	bool learnParameters(PointCloud*, Point *, MapFixture *);
+	float p_hit(Point, Point, MapFixture *);
+	float sig_hit;
+
+	// A static parameter of any single point cloud
+	float z_max;
 };
 
 bool SensorModel::createModel(PointCloud * point_cloud, 
@@ -225,23 +241,62 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		//ROS_INFO("Point: x=%f, y=%f, z=%f.", point_cloud->points[i].x,point_cloud->points[i].y, point_cloud->points[i].z);
 	}
 
-	// Publish point cloud for reference by other nodes
+	// Publish point cloud for reference by other nodes, not currently really useful
     point_cloud->header.frame_id = "map";
     pc_pub_ptr->publish(*point_cloud);
 
-	return learnParameters(point_cloud);
+    // Determine which point is the farthest away from the sensor, call this the longest range, which is the sensor param z_max
+    float longest_range = -1; 
+    float range;
+	for(int i = 0; i < cloud_size; i++)
+	{
+		Point meas_point = point_cloud->points[i];
+		range = sqrt((meas_point.x)*(meas_point.x) + (meas_point.y)*(meas_point.y) 
+						+ (meas_point.z)*(meas_point.z));
+		if(range > longest_range)
+		{
+			longest_range = range;
+		}
+	}
+
+	// Check that we actually found a z_max here, and store it in the object
+	if (longest_range > 0)
+	{
+		z_max = longest_range;
+	}
+	else
+	{
+		ROS_WARN("COULD NOT FIND z_max/longest_range, z_max is uninitialized!");
+	}
+
+	return learnParameters(point_cloud, origin, map_plane);
 }
 
-bool SensorModel::learnParameters(PointCloud * Z)
+bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 {
+	PointCloud z1 = *Z;
+	// Convergence learning parameters
 	bool converged = false;
 	int i = 0;
 	int max_i = 50;
 
-	// Loop following until convergence criteria is met
+	// ASSUME for now
+	sig_hit = 0.2;
+
+	// P_hit
+	float hit;
+	
+	// Normalization value
+	float eta;
+	// Loop following until convergence criteria is met or we try to many times
 	do
 	{
-
+		for (int k = 0; k < Z->size(); k++)
+		{
+			Point z_k = z1[k];
+			hit = p_hit(z_k, *X, m);
+			ROS_INFO("P_hit = %f", hit);
+		}
 		i++;
 	}
 	while((converged == false) && (i <= max_i));
@@ -253,6 +308,32 @@ bool SensorModel::learnParameters(PointCloud * Z)
 	else
 	{
 		return false;	
+	}
+}
+
+float SensorModel::p_hit(Point Zk, Point x, MapFixture * m)
+{
+	Point meas_point = m->rayTrace(x, Zk);
+
+	float z_k_star = sqrt((meas_point.x)*(meas_point.x) + (meas_point.y)*(meas_point.y) 
+					+ (meas_point.z)*(meas_point.z));
+
+	float z_k = sqrt((Zk.x)*(Zk.x) + (Zk.y)*(Zk.y) 
+					+ (Zk.z)*(Zk.z));
+
+	if(!std::isfinite(z_k_star))
+	{
+		ROS_WARN("P_HIT reports that the measurement point doesn't intersect plane!");
+		return 0;	
+	}
+	else
+	{
+		ROS_INFO("z_k_star = %f", z_k_star);
+		float normalizer = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
+		float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS);
+		float eta = 1/integrated_normalizer;
+		ROS_INFO("P_hit normalization constant ETA is %f", eta);
+		return 0;
 	}
 }
 
@@ -286,6 +367,7 @@ int main(int argc, char **argv)
     	// Instantiate a sensor model
     	SensorModel ourSensor;
 
+    	// Instantiate our map model
     	MapFixture ourMap;
 
     	// Define the sensor as being at the origin of our 'universe'
@@ -298,12 +380,14 @@ int main(int argc, char **argv)
     	}
 
     	std::vector<Point> test_points;
+    	/*
     	test_points.push_back(Point(0, 1, 1.5));
     	test_points.push_back(Point(0.2, 0.1, 1));
     	test_points.push_back(Point(0.2, 0, 1));
     	test_points.push_back(Point(-2, 5, 3));
     	test_points.push_back(Point(-1, 6, 0));
     	test_points.push_back(Point(0.5, 0, 0.5));
+		*/
 
     	// Iterate through all test cases
     	for(int i = 0; i < test_points.size(); i++)
@@ -315,6 +399,7 @@ int main(int argc, char **argv)
     		ROS_INFO("is located at the point (%f, %f, %f).", intersection_point.x, intersection_point.y,intersection_point.z);
     	}
 
+    	// Create a model of the sensor (high-level command)
     	if(ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensor_origin) == false)
     	{
     		ROS_WARN("Failed to model sensor!");
@@ -322,6 +407,7 @@ int main(int argc, char **argv)
     	}
     }
 
+    // Check this-node functional testing and report to user
     if(test_passed == false)
     {
     	ROS_WARN("FUNCTION TEST FAILED: Something is borked");
@@ -332,7 +418,7 @@ int main(int argc, char **argv)
     	nh_ptr->setParam("/ispl/success", true);
     }
 
-    // Create sensor params, but should come from the algorithm 
+    // Create sensor params, but should come from the algorithm above
     float z_hit = 1.55;
     float z_short = 5.62;
     float z_max = 0.66;
