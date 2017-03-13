@@ -236,11 +236,16 @@ private:
 	bool learnParameters(PointCloud*, Point *, MapFixture *);
 	float p_hit(Point, Point, MapFixture *);
 	float p_short(Point, Point, MapFixture *);
+	float p_max(Point, Point, MapFixture *);
 	float sig_hit;
 	float lam_short;
 
 	// A static parameter of any single point cloud, it's the distance to the farthest point
 	float z_max;
+
+	// A computational-only parameter of the model. Represents max %difference from z_max that the measurement can be
+	//   Occurs due to the fact that computers cant process infinitesimal width distributions
+	float z_max_tol;
 };
 
 bool SensorModel::createModel(PointCloud * point_cloud, 
@@ -282,6 +287,9 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 	{
 		ROS_WARN("COULD NOT FIND z_max/longest_range, z_max is uninitialized!");
 	}
+
+	// This seems reasonable to me
+	z_max_tol = 0.01;
 
 	// Do magic!
 	return learnParameters(point_cloud, origin, map_plane);
@@ -448,6 +456,40 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 		}
 		return p_short;
 	}
+}
+
+/*
+Function: SensorModel::p_max
+Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
+Output: Returns the probability that the measurement specified was actually a maxed-out range
+Notes: Calls for z_max, within the SensorModel instantiation object
+*/
+float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
+{
+	// Ray trace from the origin to the measurement point to find where it intersects the map
+	// This point is the location of where the meas_point 'should' have been
+	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the measurment point
+	float z_k = vectorLength(sensor_origin, meas_point);
+
+	float p_max;
+	if(z_k > z_max)
+	{
+		ROS_WARN("Found a measurement larger than the largest measurement, that's pretty messed up.");
+	}
+	else
+	{
+		if(z_k > (1 - z_max_tol)*z_max)
+		{
+			p_max = 1;
+		}
+		else
+		{
+			p_max = 0;
+		}
+	}
+	return p_max;
 }
 
 ///////////////////////////        MAIN       ////////////////////////////
