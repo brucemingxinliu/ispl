@@ -134,7 +134,6 @@ Notes: The four input points should be very approximately co-planar or validatio
 		Also, because I am an engineer and not a mathematician, I highly blur the line between what 
 		a "point" is versus a "vector". Deal with it.
 */
-
 bool MapFixture::setCorners(Point corner1, 
 						Point corner2, 
 						Point corner3, 
@@ -281,6 +280,7 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		ROS_WARN("COULD NOT FIND z_max/longest_range, z_max is uninitialized!");
 	}
 
+	// Do magic!
 	return learnParameters(point_cloud, origin, map_plane);
 }
 
@@ -361,30 +361,44 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 	}
 	else
 	{
+		/* 
+		float integral(float(*f)(float x1, float x2, float x3), float a, float b, int n, float mean, float variance) {
+		    float step = (b - a) / n;  // width of each small rectangle
+		    float area = 0.0;  // signed area
+		    for (int i = 0; i < n; i ++) {
+		        area += f(a + (i + 0.5) * step, mean, variance) * step; // sum up each small rectangle
+		    }
+		    return area;
+		}
+		*/
 		// Compute the total area under the normal distribution curve
-		float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
-		float eta = 1/integrated_normalizer;
+		//float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
+		float in2 = normalDistribution(z_k_star, z_k_star, sig_hit*sig_hit);
+		//float eta = 1/integrated_normalizer;
+		float eta2 = 1/in2;
 		float nd = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
+		// Alternative to above: float nd2 = integral(normalDistribution, 0, z_k, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float p_hit;
 		if(!std::isfinite(eta))
 		{
-			p_hit = 0;
+			p_hit = 0; // Otherwise p_hit ends up being not a number; don't worry, all this means is that p_hit is nothing
 		}
 		else
 		{
-			p_hit = eta*nd;
+			p_hit = eta2*nd;
 		}
 
-		if(1)//!std::isfinite(p_hit))
+		ROS_INFO("SEE ANYTHING?");
+		if(p_hit < 0 || p_hit > 1)//1)//!std::isfinite(p_hit))
 		{
 			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
 			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
 			ROS_INFO("Distance to measured point z_k = %f", z_k);
 			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
-			ROS_INFO("Sig_hit = %f   z_max = %f", sig_hit, z_max);
-			ROS_INFO("integrated normalizer = %f", integrated_normalizer);
-			ROS_INFO("eta is %f", eta);
-			ROS_INFO("normalDist is %f", nd);
+			ROS_INFO("Sig_hit = %f  z_max = %f", sig_hit, z_max);
+			ROS_INFO("Integrated normalizer = %f", in2);
+			ROS_INFO("eta2 is %f", eta2);
+			ROS_INFO("nd is %f", nd);
 			ROS_INFO("P_hit is %f \n", p_hit);
 		}
 		return p_hit;
