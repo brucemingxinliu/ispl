@@ -81,6 +81,7 @@ bool waitForSubs()
 }
 
 /////////////////////           MATHEMATICS FUNCTIONS           ////////////////
+// Calculates the y value of the normal distribution at some point x given some mean and variance
 float normalDistribution(float x, float mean, float variance)
 {
 	float exp_term = exp(-(x - mean)*(x - mean)/(2*variance));
@@ -234,9 +235,11 @@ public:
 private:
 	bool learnParameters(PointCloud*, Point *, MapFixture *);
 	float p_hit(Point, Point, MapFixture *);
+	float p_short(Point, Point, MapFixture *);
 	float sig_hit;
+	float lam_short;
 
-	// A static parameter of any single point cloud
+	// A static parameter of any single point cloud, it's the distance to the farthest point
 	float z_max;
 };
 
@@ -295,8 +298,8 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	int max_i = 1;
 
 	// ASSUME for now. This is the intrinsic noise parameter of the meas model
-	sig_hit = 0.2;
-
+	sig_hit = 0.1;
+	lam_short = 0.2;
 	// P_hit
 	float hit;
 	
@@ -361,16 +364,6 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 	}
 	else
 	{
-		/* 
-		float integral(float(*f)(float x1, float x2, float x3), float a, float b, int n, float mean, float variance) {
-		    float step = (b - a) / n;  // width of each small rectangle
-		    float area = 0.0;  // signed area
-		    for (int i = 0; i < n; i ++) {
-		        area += f(a + (i + 0.5) * step, mean, variance) * step; // sum up each small rectangle
-		    }
-		    return area;
-		}
-		*/
 		// Compute the total area under the normal distribution curve
 		//float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float in2 = normalDistribution(z_k_star, z_k_star, sig_hit*sig_hit);
@@ -379,7 +372,7 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 		float nd = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
 		// Alternative to above: float nd2 = integral(normalDistribution, 0, z_k, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float p_hit;
-		if(!std::isfinite(eta))
+		if(!std::isfinite(eta2))
 		{
 			p_hit = 0; // Otherwise p_hit ends up being not a number; don't worry, all this means is that p_hit is nothing
 		}
@@ -388,9 +381,9 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 			p_hit = eta2*nd;
 		}
 
-		ROS_INFO("SEE ANYTHING?");
-		if(p_hit < 0 || p_hit > 1)//1)//!std::isfinite(p_hit))
+		if(p_hit < 0 || p_hit > 1) //!std::isfinite(p_hit))
 		{
+			ROS_WARN("WARNING: Potential improper p_hit value!");
 			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
 			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
 			ROS_INFO("Distance to measured point z_k = %f", z_k);
@@ -402,6 +395,58 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 			ROS_INFO("P_hit is %f \n", p_hit);
 		}
 		return p_hit;
+	}
+}
+
+/*
+Function: SensorModel::p_short
+Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
+Output: Returns the probability that the measurement specified was actually short of the actual object
+Notes: Calls for lam_short, within the SensorModel instantiation object
+*/
+float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m)
+{
+	// Ray trace from the origin to the measurement point to find where it intersects the map
+	// This point is the location of where the meas_point 'should' have been
+	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the measurment point
+	float z_k = vectorLength(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the intersection point
+	float z_k_star = vectorLength(sensor_origin, intersection_point);
+
+	if(!std::isfinite(z_k_star))
+	{
+		ROS_WARN("P_SHORT reports that the measurement point doesn't intersect the map plane, returning 0!");
+		return 0;
+	}
+	else
+	{
+		float eta = 1/(1 - exp(-lam_short*z_k_star));
+
+		float p_short;
+		if(!std::isfinite(eta))
+		{
+			p_short = 0; // Otherwise p_short ends up being not a number; don't worry, all this means is that p_short is nothing
+		}
+		else
+		{
+			p_short = eta * lam_short * exp(-lam_short*z_k);
+		}
+
+		if(p_short < 0 || p_short > 1)
+		{
+			ROS_WARN("WARNING: Potential improper p_short value!");
+			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
+			ROS_INFO("Distance to measured point z_k = %f", z_k);
+			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
+			ROS_INFO("Lam_short = %f", lam_short);
+			ROS_INFO("eta is %f", eta);
+			ROS_INFO("P_short is %f \n", p_short);
+		}
+		return p_short;
 	}
 }
 
