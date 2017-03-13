@@ -99,6 +99,18 @@ float integral(float(*f)(float x1, float x2, float x3), float a, float b, int n,
     return area;
 }
 
+/*
+Function: vectorLength()
+Input: Two PCL Point objects anywhere in space
+Output: Returns the float value of the magnitude length from one point to the other point 
+Notes: Put garbage in (inf, nan), get garbage out (inf, nan)
+*/
+float vectorLength(Point a, Point b)
+{
+	Point vector(a.x - b.x, a.y - b.y, a.z - b.z);
+	return sqrt((vector.x)*(vector.x) + (vector.y)*(vector.y) + (vector.z)*(vector.z));
+}
+
 /////////////////////////////          MAP FIXTURE       /////////////////////
 class MapFixture
 {
@@ -237,6 +249,7 @@ private:
 	float p_hit(Point, Point, MapFixture *);
 	float p_short(Point, Point, MapFixture *);
 	float p_max(Point, Point, MapFixture *);
+	float p_rand(Point, Point, MapFixture *);
 	float sig_hit;
 	float lam_short;
 
@@ -308,19 +321,99 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// ASSUME for now. This is the intrinsic noise parameter of the meas model
 	sig_hit = 0.1;
 	lam_short = 0.2;
-	// P_hit
-	float hit;
+
+	float p_hit_val;
+	float p_short_val;
+	float p_max_val;
+	float p_rand_val;
 	
 	// Overall normalization value
 	float eta;
-	// Loop following until convergence criteria is met or we try to many times
+
+	std::vector<float> e_hit;
+	std::vector<float> e_short;
+	std::vector<float> e_max;
+	std::vector<float> e_rand;
+
+	float z_hit;
+	float z_short;
+	float z_max;
+	float z_rand;
+
+	float mag_Z = 0;
+
+	float e_hit_sum = 0;
+	float e_short_sum = 0;
+	float e_max_sum = 0;
+	float e_rand_sum = 0;
+
+	// Loop following until convergence criteria is met or we try to many times?
 	do
 	{
 		for (int k = 0; k < Z->size(); k++)
 		{
-			hit = p_hit(data_cloud[k], sensor_origin, m);
-			//ROS_INFO("P_hit = %f", hit);
+			// TO DO ADD E HIT OFFSET CALC RELEVANT HERE
+			p_hit_val = p_hit(data_cloud[k], sensor_origin, m);
+			p_short_val = p_short(data_cloud[k], sensor_origin, m);
+			p_max_val = p_max(data_cloud[k], sensor_origin, m);
+			p_rand_val = p_rand(data_cloud[k], sensor_origin, m);
+			/*
+			ROS_INFO("p_hit_val = %f", p_hit_val);
+			ROS_INFO("p_short_val = %f", p_short_val);
+			ROS_INFO("p_max_val = %f", p_max_val);
+			ROS_INFO("p_rand_val = %f", p_rand_val);
+			*/
+			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
+
+			// TO DO   CALCULATE Z_i_star
+
+			// NOTE: As long as this loops index stays in 0 to size(z) order, then index of data_cloud and these four vectors will match up
+			e_hit.push_back(eta * p_hit_val);
+			e_short.push_back(eta * p_short_val);
+			e_max.push_back(eta * p_max_val);
+			e_rand.push_back(eta * p_rand_val);
+
+			// TO DO ADD THIS
+			// For sig_hit calculation later
+			//e_hit_offset.push_back(eta * p_hit_offset_val );
+
+			// Add on this point cloud magnitude to the sum of all magnitudes in the point cloud for later use
+			mag_Z += vectorLength(sensor_origin, data_cloud[k]);
 		}
+
+		// Compute sums...
+		for(int j = 0; j < e_hit.size(); j++)
+		{
+			e_hit_sum += e_hit[j];
+		}
+
+		for(int j = 0; j < e_hit.size(); j++)
+		{
+			e_short_sum += e_short[j];
+		}
+
+		for(int j = 0; j < e_hit.size(); j++)
+		{
+			e_max_sum += e_max[j];
+		}
+
+		for(int j = 0; j < e_hit.size(); j++)
+		{
+			e_rand_sum += e_rand[j];
+		}
+
+		// TO DO ADD E HIT OFFSET SUM
+
+		// Compute each four of these parameters (at least for this iteration)
+		z_hit = e_hit_sum/mag_Z;
+		z_short = e_short_sum/mag_Z;
+		z_max = e_max_sum/mag_Z;
+		z_rand = e_rand_sum/mag_Z;
+
+		// TO DO ADD z_hit_offset SUM
+
+		// TO DO FINISH THIS CALC sig_hit = sqrt()
+
 		i++;
 	}
 	while((converged == false) && (i < max_i));
@@ -333,18 +426,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	{
 		return false;	
 	}
-}
-
-/*
-Function: vectorLength()
-Input: Two PCL Point objects anywhere in space
-Output: Returns the float value of the magnitude length from one point to the other point 
-Notes: Put garbage in (inf, nan), get garbage out (inf, nan)
-*/
-float vectorLength(Point a, Point b)
-{
-	Point vector(a.x - b.x, a.y - b.y, a.z - b.z);
-	return sqrt((vector.x)*(vector.x) + (vector.y)*(vector.y) + (vector.z)*(vector.z));
 }
 
 /*
@@ -476,7 +557,7 @@ float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 	float p_max;
 	if(z_k > z_max)
 	{
-		ROS_WARN("Found a measurement larger than the largest measurement, that's pretty messed up.");
+		ROS_WARN("P MAX Found a measurement larger than the largest measurement, that's pretty messed up.");
 	}
 	else
 	{
@@ -491,6 +572,34 @@ float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 	}
 	return p_max;
 }
+
+/*
+Function: SensorModel::p_rand
+Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
+Output: Returns the probability that the measurement specified was actually just some random value in the range from 0 -> z_max
+Notes: Calls for z_max within the SensorModel instantiation object
+*/
+float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
+{
+	// Ray trace from the origin to the measurement point to find where it intersects the map
+	// This point is the location of where the meas_point 'should' have been
+	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the measurment point
+	float z_k = vectorLength(sensor_origin, meas_point);
+
+	float p_rand;
+	if(z_k > z_max)
+	{
+		ROS_WARN("P RAND Found a measurement larger than the largest measurement, that's pretty messed up.");
+	}
+	else
+	{
+		p_rand = 1/z_max;
+	}
+	return p_rand;
+}
+
 
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
