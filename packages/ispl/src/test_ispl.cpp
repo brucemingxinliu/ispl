@@ -81,6 +81,7 @@ int main(int argc, char **argv)
             is_reasonable_param(sig_hit) &&
             is_reasonable_param(lam_short))
         {
+        	// This param value is main test result from module
             if(nh_ptr->hasParam("/ispl/success"))
             {
 

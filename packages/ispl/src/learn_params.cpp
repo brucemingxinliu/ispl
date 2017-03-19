@@ -226,7 +226,6 @@ Point MapFixture::rayTrace(Point origin, Point rayPoint)
 
 Point MapFixture::unitCrossProduct(Point u, Point v)
 {
-	//ROS_INFO("TEST: vector(%f,%f,%f) x vector(%f,%f,%f)...", u.x,u.y,u.z,v.x,v.y,v.z);
 	float a = u.y*v.z - u.z*v.y;
 	float b = u.z*v.x - u.x*v.z;
 	float c = u.x*v.y - u.y*v.x;
@@ -234,7 +233,6 @@ Point MapFixture::unitCrossProduct(Point u, Point v)
 	a = a/length;
 	b = b/length;
 	c = c/length;
-	//ROS_INFO("...is (%f,%f,%f)", a, b, c);
 
 	return Point(a,b,c);
 }
@@ -244,20 +242,27 @@ class SensorModel
 {
 public:
 	bool createModel(PointCloud*, MapFixture *, Point *);
+
+	float z_hit;
+	float z_short;
+	float z_max;
+	float z_rand;
+	float sig_hit;
+	float lam_short;
 private:
 	bool learnParameters(PointCloud*, Point *, MapFixture *);
 	float p_hit(Point, Point, MapFixture *);
 	float p_short(Point, Point, MapFixture *);
 	float p_max(Point, Point, MapFixture *);
 	float p_rand(Point, Point, MapFixture *);
-	float sig_hit;
-	float lam_short;
+
+	float p_hit_offset(Point, Point, MapFixture *);
 
 	// A static parameter of any single point cloud, it's the distance to the farthest point
-	float z_max;
+	float furthest_z;
 
 	// A computational-only parameter of the model. Represents max %difference from z_max that the measurement can be
-	//   Occurs due to the fact that computers cant process infinitesimal width distributions
+	//   Occurs due to the fact that computers cannot process infinitesimal width distributions
 	float z_max_tol;
 };
 
@@ -277,7 +282,7 @@ bool SensorModel::createModel(PointCloud * point_cloud,
     point_cloud->header.frame_id = "map";
     pc_pub_ptr->publish(*point_cloud);
 
-    // Determine which point is the farthest away from the sensor, call this the longest range, which is the sensor param z_max
+    // Determine which point is the farthest away from the sensor, call this the longest range, which is thus furthest_z
     float longest_range = -1; 
     float range;
 	for(int i = 0; i < cloud_size; i++)
@@ -291,14 +296,14 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		}
 	}
 
-	// Check that we actually found a z_max here, and store it in the object
+	// Check that we actually found a furthest_z here, and store it in the object
 	if (longest_range > 0)
 	{
-		z_max = longest_range;
+		furthest_z = longest_range;
 	}
 	else
 	{
-		ROS_WARN("COULD NOT FIND z_max/longest_range, z_max is uninitialized!");
+		ROS_WARN("COULD NOT FIND furthest_z/longest_range, furthest_z is uninitialized!");
 	}
 
 	// This seems reasonable to me
@@ -316,7 +321,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	bool converged = false;
 	int i = 0;
 	// Make maybe 50 later?
-	int max_i = 1;
+	int max_i = 50;
 
 	// ASSUME for now. This is the intrinsic noise parameter of the meas model
 	sig_hit = 0.1;
@@ -326,6 +331,8 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	float p_short_val;
 	float p_max_val;
 	float p_rand_val;
+
+	float p_hit_offset_val;
 	
 	// Overall normalization value
 	float eta;
@@ -334,11 +341,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	std::vector<float> e_short;
 	std::vector<float> e_max;
 	std::vector<float> e_rand;
-
-	float z_hit;
-	float z_short;
-	float z_max;
-	float z_rand;
+	std::vector<float> e_hit_offset;
 
 	float mag_Z = 0;
 
@@ -347,25 +350,30 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	float e_max_sum = 0;
 	float e_rand_sum = 0;
 
+	float e_hit_offset_sum = 0;
+	float e_short_ext_sum = 0;
+
 	// Loop following until convergence criteria is met or we try to many times?
 	do
 	{
 		for (int k = 0; k < Z->size(); k++)
 		{
-			// TO DO ADD E HIT OFFSET CALC RELEVANT HERE
 			p_hit_val = p_hit(data_cloud[k], sensor_origin, m);
 			p_short_val = p_short(data_cloud[k], sensor_origin, m);
 			p_max_val = p_max(data_cloud[k], sensor_origin, m);
 			p_rand_val = p_rand(data_cloud[k], sensor_origin, m);
+
+			// This includes "calculate z_i_star":
+			p_hit_offset_val = p_hit_offset(data_cloud[k], sensor_origin, m);
+
 			/*
 			ROS_INFO("p_hit_val = %f", p_hit_val);
 			ROS_INFO("p_short_val = %f", p_short_val);
 			ROS_INFO("p_max_val = %f", p_max_val);
 			ROS_INFO("p_rand_val = %f", p_rand_val);
 			*/
-			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
 
-			// TO DO   CALCULATE Z_i_star
+			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
 
 			// NOTE: As long as this loops index stays in 0 to size(z) order, then index of data_cloud and these four vectors will match up
 			e_hit.push_back(eta * p_hit_val);
@@ -373,9 +381,8 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			e_max.push_back(eta * p_max_val);
 			e_rand.push_back(eta * p_rand_val);
 
-			// TO DO ADD THIS
-			// For sig_hit calculation later
-			//e_hit_offset.push_back(eta * p_hit_offset_val );
+			// For sig_hit re-calculation later
+			e_hit_offset.push_back(eta * p_hit_offset_val);
 
 			// Add on this point cloud magnitude to the sum of all magnitudes in the point cloud for later use
 			mag_Z += vectorLength(sensor_origin, data_cloud[k]);
@@ -387,22 +394,30 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			e_hit_sum += e_hit[j];
 		}
 
-		for(int j = 0; j < e_hit.size(); j++)
+		for(int j = 0; j < e_short.size(); j++)
 		{
 			e_short_sum += e_short[j];
 		}
 
-		for(int j = 0; j < e_hit.size(); j++)
+		for(int j = 0; j < e_short.size(); j++)
+		{
+			e_short_ext_sum += e_short[j]*vectorLength(sensor_origin, data_cloud[j]);
+		}
+
+		for(int j = 0; j < e_max.size(); j++)
 		{
 			e_max_sum += e_max[j];
 		}
 
-		for(int j = 0; j < e_hit.size(); j++)
+		for(int j = 0; j < e_rand.size(); j++)
 		{
 			e_rand_sum += e_rand[j];
 		}
 
-		// TO DO ADD E HIT OFFSET SUM
+		for(int j = 0; j < e_hit_offset.size(); j++)
+		{
+			e_hit_offset_sum += pow(e_hit_offset[j], 2);
+		}
 
 		// Compute each four of these parameters (at least for this iteration)
 		z_hit = e_hit_sum/mag_Z;
@@ -410,9 +425,16 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		z_max = e_max_sum/mag_Z;
 		z_rand = e_rand_sum/mag_Z;
 
-		// TO DO ADD z_hit_offset SUM
+		sig_hit = sqrt((e_hit_offset_sum)/(e_hit_sum));
 
-		// TO DO FINISH THIS CALC sig_hit = sqrt()
+		lam_short = e_short_sum/e_short_ext_sum;
+
+		ROS_INFO("z_hit: %f", z_hit);
+		ROS_INFO("z_short: %f", z_short);
+		ROS_INFO("z_max: %f", z_max);
+		ROS_INFO("z_rand: %f", z_rand);
+		ROS_INFO("sig_hit: %f", sig_hit);
+		ROS_INFO("lam_short: %f", lam_short);
 
 		i++;
 	}
@@ -428,11 +450,72 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	}
 }
 
+
+/*
+Function: SensorModel::p_hit_offset
+Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
+Output: Returns the probability that the measurement specified actually hit the location specified by the sensor/map geometry, given a normal noise distribution
+Notes: Companion function to "p_hit". Calls for sig_hit and furthest_z, within the SensorModel instantiation object
+*/
+float SensorModel::p_hit_offset(Point meas_point, Point sensor_origin, MapFixture * m)
+{
+	// Ray trace from the origin to the measurement point to find where it intersects the map
+	// This point is the location of where the meas_point 'should' have been
+	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the measurment point
+	float z_k = vectorLength(sensor_origin, meas_point);
+
+	// Compute the magnitude distance from the sensor to the intersection point
+	float z_k_star = vectorLength(sensor_origin, intersection_point);
+
+	//float temp = z_k;
+	z_k = z_k - z_k_star;
+	//ROS_INFO("Reassigning z_k from %f to %f for p hit offset thing.", temp, z_k);
+
+	if(!std::isfinite(z_k_star))
+	{
+		ROS_WARN("P_HIT_OFFSET reports that the measurement point doesn't intersect the map plane, returning 0!");
+		return 0;
+	}
+	else
+	{
+		// Compute the total area under the normal distribution curve
+		float in2 = normalDistribution(z_k_star, z_k_star, sig_hit*sig_hit);
+		float eta2 = 1/in2;
+		float nd = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
+		float p_hit_offset;
+		if(!std::isfinite(eta2))
+		{
+			p_hit_offset = 0; // Otherwise p_hit_offset ends up being not a number; don't worry, all this means is that p_hit_offset is nothing
+		}
+		else
+		{
+			p_hit_offset = eta2*nd;
+		}
+
+		if(p_hit_offset < 0 || p_hit_offset > 1) //!std::isfinite(p_hit_offset))
+		{
+			ROS_WARN("WARNING: Potential improper p_hit_offset value!");
+			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
+			ROS_INFO("Distance to measured point z_k = %f", z_k);
+			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
+			ROS_INFO("Sig_hit = %f  furthest_z = %f", sig_hit, furthest_z);
+			ROS_INFO("Integrated normalizer = %f", in2);
+			ROS_INFO("eta2 is %f", eta2);
+			ROS_INFO("nd is %f", nd);
+			ROS_INFO("p_hit_offset is %f \n", p_hit_offset);
+		}
+		return p_hit_offset;
+	}
+}
+
 /*
 Function: SensorModel::p_hit
 Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
 Output: Returns the probability that the measurement specified actually hit the location specified by the sensor/map geometry, given a normal noise distribution
-Notes: Calls for sig_hit and z_max, within the SensorModel instantiation object
+Notes: Calls for sig_hit and furthest_z, within the SensorModel instantiation object
 */
 float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 {
@@ -454,7 +537,7 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 	else
 	{
 		// Compute the total area under the normal distribution curve
-		//float integrated_normalizer = integral(normalDistribution, 0, z_max, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
+		//float integrated_normalizer = integral(normalDistribution, 0, furthest_z, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float in2 = normalDistribution(z_k_star, z_k_star, sig_hit*sig_hit);
 		//float eta = 1/integrated_normalizer;
 		float eta2 = 1/in2;
@@ -477,7 +560,7 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
 			ROS_INFO("Distance to measured point z_k = %f", z_k);
 			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
-			ROS_INFO("Sig_hit = %f  z_max = %f", sig_hit, z_max);
+			ROS_INFO("Sig_hit = %f  furthest_z = %f", sig_hit, furthest_z);
 			ROS_INFO("Integrated normalizer = %f", in2);
 			ROS_INFO("eta2 is %f", eta2);
 			ROS_INFO("nd is %f", nd);
@@ -543,7 +626,7 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 Function: SensorModel::p_max
 Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
 Output: Returns the probability that the measurement specified was actually a maxed-out range
-Notes: Calls for z_max, within the SensorModel instantiation object
+Notes: Calls for furthest_z, within the SensorModel instantiation object
 */
 float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 {
@@ -555,13 +638,13 @@ float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 	float z_k = vectorLength(sensor_origin, meas_point);
 
 	float p_max;
-	if(z_k > z_max)
+	if(z_k > furthest_z)
 	{
-		ROS_WARN("P MAX Found a measurement larger than the largest measurement, that's pretty messed up.");
+		ROS_WARN("P MAX Found a measurement larger than the largest measurement furthest_z, that's pretty messed up.");
 	}
 	else
 	{
-		if(z_k > (1 - z_max_tol)*z_max)
+		if(z_k > (1 - z_max_tol)*furthest_z)
 		{
 			p_max = 1;
 		}
@@ -576,8 +659,8 @@ float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 /*
 Function: SensorModel::p_rand
 Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
-Output: Returns the probability that the measurement specified was actually just some random value in the range from 0 -> z_max
-Notes: Calls for z_max within the SensorModel instantiation object
+Output: Returns the probability that the measurement specified was actually just some random value in the range from 0 -> furthest_z
+Notes: Calls for furthest_z within the SensorModel instantiation object
 */
 float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 {
@@ -589,13 +672,13 @@ float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 	float z_k = vectorLength(sensor_origin, meas_point);
 
 	float p_rand;
-	if(z_k > z_max)
+	if(z_k > furthest_z)
 	{
 		ROS_WARN("P RAND Found a measurement larger than the largest measurement, that's pretty messed up.");
 	}
 	else
 	{
-		p_rand = 1/z_max;
+		p_rand = 1/furthest_z;
 	}
 	return p_rand;
 }
@@ -621,6 +704,13 @@ int main(int argc, char **argv)
  	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
     pc_pub_ptr = &pc_pub;
 
+    // Start non ros stuff
+    // Instantiate a sensor model
+    SensorModel ourSensor;
+
+	// Instantiate our map model
+	MapFixture ourMap;
+
     if(test_active == true)
     {
     	if(waitForSubs() == false)
@@ -629,13 +719,7 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	// Instantiate a sensor model
-    	SensorModel ourSensor;
-
-    	// Instantiate our map model
-    	MapFixture ourMap;
-
-    	// Define the sensor as being at the origin of our 'universe'
+    	// Define the sensor as being at the origin of our 'universe', this is a basic assumption of our map model
     	Point sensor_origin(0,0,0);
 
     	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
@@ -671,8 +755,6 @@ int main(int argc, char **argv)
     		test_passed = false;    	
     	}
 
-    	// Test normal dist function
-    	//for(int i = 0; i < )
     }
 
     // Check this-node functional testing and report to user
@@ -686,21 +768,13 @@ int main(int argc, char **argv)
     	nh_ptr->setParam("/ispl/success", true);
     }
 
-    // Create sensor params, but should come from the algorithm above
-    float z_hit = 1.55;
-    float z_short = 5.62;
-    float z_max = 0.66;
-    float z_rand = 0.05;
-    float sig_hit = 1.15;
-    float lam_short = 0.1511;
-
     // Publish found parameters
-    nh_ptr->setParam("/ispl/z_hit", z_hit);
-    nh_ptr->setParam("/ispl/z_short", z_short);
-    nh_ptr->setParam("/ispl/z_max", z_max);
-    nh_ptr->setParam("/ispl/z_rand", z_rand);
-    nh_ptr->setParam("/ispl/sig_hit", sig_hit);
-    nh_ptr->setParam("/ispl/lam_short", lam_short);
+    nh_ptr->setParam("/ispl/z_hit", ourSensor.z_hit);
+    nh_ptr->setParam("/ispl/z_short", ourSensor.z_short);
+    nh_ptr->setParam("/ispl/z_max", ourSensor.z_max);
+    nh_ptr->setParam("/ispl/z_rand", ourSensor.z_rand);
+    nh_ptr->setParam("/ispl/sig_hit", ourSensor.sig_hit);
+    nh_ptr->setParam("/ispl/lam_short", ourSensor.lam_short);
 
     // Tell test node that we are done
     nh_ptr->setParam("/learning_done", true);
