@@ -17,7 +17,7 @@ bool g_received_measurements;
 bool is_reasonable_param(float sensor_param_val)
 {
     // Liable to change
-    if((sensor_param_val < 100000) && (sensor_param_val > 0))
+    if((sensor_param_val < 100000) && (sensor_param_val >= 0))
     {
         return true;  
     }
@@ -81,13 +81,15 @@ int main(int argc, char **argv)
             is_reasonable_param(sig_hit) &&
             is_reasonable_param(lam_short))
         {
+			ROS_INFO("Found parameters: \n z_hit = %f \n z_short = %f \n z_max = %f \n z_rand = %f \n | sig_hit = %f \n | lam_short = %f", z_hit, z_short, z_max, z_rand, sig_hit, lam_short);
         	// This param value is main test result from module
             if(nh_ptr->hasParam("/ispl/success"))
             {
-
+            	ROS_INFO("...and these values may be trusted.");
             }
             else
             {
+            	ROS_INFO("...but the values are not trustworthy!");
                 node_level_tests_failed++;
             }
         }

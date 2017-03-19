@@ -10,6 +10,9 @@
 #include <pcl/point_types.h>
 #include <pcl/features/feature.h>
 
+// Includes map fixture and sensor model classes
+#include <ispl/models.h>
+
 #include <iostream>
 #include <fstream>
 
@@ -112,6 +115,20 @@ float vectorLength(Point a, Point b)
 {
 	Point vector(a.x - b.x, a.y - b.y, a.z - b.z);
 	return sqrt((vector.x)*(vector.x) + (vector.y)*(vector.y) + (vector.z)*(vector.z));
+}
+
+// Checks if two values are within a specified absolute tolerance
+// This is used in the main algorithm to check if the new value has changed from the old value. 
+// If not, then the variable has converged. Also, this deals with some 0/NaN values.
+bool checkConvergence(float new_val, float old_val, float tolerance)
+{
+	float difference = new_val - old_val;
+	// If we know that the change in the two values is identically 0, we can just return that it converged, because if we did the calculation it would be NaN.
+	if (difference == 0)
+	{
+		return true;
+	}
+	return (fabs(difference/new_val) < tolerance);
 }
 
 /////////////////////////////          MAP FIXTURE       /////////////////////
@@ -245,7 +262,7 @@ class SensorModel
 {
 public:
 	bool createModel(PointCloud*, MapFixture *, Point *);
-
+	bool setInitialParams(float, float, float, float, float, float);
 	float z_hit;
 	float z_short;
 	float z_max;
@@ -276,14 +293,50 @@ private:
 	float sig_hit_conv_perc;
 	float lam_short_conv_perc;
 
+	// for debug?
 	std::ofstream param_file;
 };
+
+// Set the starting values of the intrinsic noise parameters that we want to have converge after applying our algorithm
+bool SensorModel::setInitialParams(float z_hit_init, float z_short_init, float z_max_init, float z_rand_init, float sig_hit_init, float lam_short_init)
+{
+	if (z_hit_init > 0)
+	{
+		z_hit = z_hit_init;
+	}
+
+	if (z_short_init > 0)
+	{
+		z_short = z_short_init;
+	}
+
+	if (z_max_init > 0)
+	{
+		z_max = z_max_init;
+	}
+
+	if (z_rand_init > 0)
+	{
+		z_rand = z_rand_init;
+	}
+
+	if (sig_hit_init > 0)
+	{
+		sig_hit = sig_hit_init;
+	}
+
+	if (lam_short_init > 0)
+	{
+		lam_short = lam_short_init;
+	}
+	ROS_INFO("Setting initial model parameters = {%f, %f, %f, %f | %f, %f}", z_hit, z_short, z_max, z_rand, sig_hit, lam_short);
+}
 
 bool SensorModel::createModel(PointCloud * point_cloud, 
 								MapFixture * map_plane,
 								Point * origin)
 {
-	// for debug only
+	// for debug?
 	param_file.open("/home/mordoc/param_convergence.txt");
 	param_file << "z_hit" << " " << "z_short" << " " << "z_max" << " " << "z_rand" << " " << "sig_hit" << " " << "lam_short" << std::endl;
 	
@@ -346,14 +399,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	int i = 0;
 	int max_i = 20;
 
-	// ASSUME for now. This are the starting values of the intrinsic noise parameters
-	z_hit = 0.5;
-	z_short = 0.1;
-	z_max = 0.2;
-	z_rand = 0.2;
-	sig_hit = 0.8;
-	lam_short = 0.2;
-
 	float p_hit_val;
 	float p_short_val;
 	float p_max_val;
@@ -364,7 +409,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// Overall normalization value
 	float eta;
 
-	// Loop following until convergence criteria is met or we try to many times?
+	// Loop following until convergence criteria is met or we reach the maximum number of tries
 	do
 	{
 		std::vector<float> e_hit;
@@ -391,7 +436,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 
 			// This includes "calculate z_i_star":
 			p_hit_offset_val = p_hit_offset(data_cloud[k], sensor_origin, m);
-
+			//ROS_INFO("p_hit_offset_val = %f", p_hit_offset_val);
 			/*
 			ROS_INFO("p_hit_val = %f", p_hit_val);
 			ROS_INFO("p_short_val = %f", p_short_val);
@@ -438,6 +483,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		for(int j = 0; j < e_hit_offset.size(); j++)
 		{
 			e_hit_offset_sum += pow(e_hit_offset[j], 2);
+			//ROS_INFO("e_hit_offset_sum = %f \n e_hit_offset[j] = %f", e_hit_offset_sum, e_hit_offset[j]);
 		}
 
 		for(int j = 0; j < e_short.size(); j++)
@@ -465,8 +511,26 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		z_short = e_short_sum/mag_Z;
 		z_max = e_max_sum/mag_Z;
 		z_rand = e_rand_sum/mag_Z;
-		sig_hit = sqrt((e_hit_offset_sum)/(e_hit_sum));
-		lam_short = e_short_sum/e_short_ext_sum;
+
+		// This little check avoids NaN's for sig_hit, if dividing 0 by 0
+		if(e_hit_offset_sum == 0)
+		{
+			sig_hit = 0;
+		}
+		else
+		{
+			sig_hit = sqrt((e_hit_offset_sum)/(e_hit_sum));
+		}
+
+		// This little check avoids NaN's for lam_short, if dividing 0 by 0. Same as above, but I dunno if this one is needed
+		if(e_short_sum == 0)
+		{
+			lam_short = 0;
+		}
+		else
+		{
+			lam_short = e_short_sum/e_short_ext_sum;
+		}
 
 		/*
 		ROS_INFO("AFTER:");
@@ -477,29 +541,48 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		ROS_INFO("sig_hit: %f", sig_hit);
 		ROS_INFO("lam_short: %f \n \n", lam_short);
 		*/
-
+		int num_conv_param = 0;
 		// There's a much better way to diagnose issues here and reduce computation time, 
 		//     but until then we simply check if each value has converged and if so, raise that flag to leave the do...while loop.
-		if(fabs((z_hit - z_hit_old)/z_hit) < z_hit_conv_perc)
+		if(checkConvergence(z_hit, z_hit_old, z_hit_conv_perc))
 		{
-			if(fabs((z_short - z_short_old)/z_short) < z_short_conv_perc)
-			{
-				if(fabs((z_max - z_max_old)/z_max) < z_max_conv_perc)
-				{
-					if(fabs((z_rand - z_rand_old)/z_rand) < z_rand_conv_perc)
-					{
-						if(fabs((sig_hit - sig_hit_old)/sig_hit) < sig_hit_conv_perc)
-						{
-							if(fabs((lam_short - lam_short_old)/lam_short) < lam_short_conv_perc)
-							{
-								converged = true;
-								ROS_INFO("CONVERGED!");
-							}
-						}
-					}
-				}
-			}
+			num_conv_param++;
 		}
+
+		if(checkConvergence(z_short, z_short_old, z_short_conv_perc))
+		{
+			num_conv_param++;
+		}
+
+		if(checkConvergence(z_max, z_max_old, z_max_conv_perc))
+		{
+			num_conv_param++;
+		}
+
+		if(checkConvergence(z_rand, z_rand_old, z_rand_conv_perc))
+		{
+			num_conv_param++;
+		}
+
+		if(checkConvergence(sig_hit, sig_hit_old, sig_hit_conv_perc))
+		{
+			num_conv_param++;
+		}
+
+		if(checkConvergence(lam_short, lam_short_old, lam_short_conv_perc))
+		{
+			num_conv_param++;
+		}
+
+		if(num_conv_param == 6)
+		{
+			converged = true;
+		}
+		else
+		{
+			//ROS_INFO("Only %d values converged.", num_conv_param);
+		}
+
 		param_file << z_hit << " " << z_short << " " << z_max << " " << z_rand << " " << sig_hit << " " << lam_short << " " << std::endl;
 		i++;
 	}
@@ -750,6 +833,7 @@ float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
+	ROS_INFO("Test = %f", test());
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");
@@ -812,8 +896,14 @@ int main(int argc, char **argv)
     		ROS_INFO("is located at the point (%f, %f, %f).", intersection_point.x, intersection_point.y,intersection_point.z);
     	}
 
-    	// Create a model of the sensor (high-level command)
-    	if(ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensor_origin) == false)
+    	if(ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 0.2))
+    	{
+    		ROS_WARN("Failed to set initial model parameter values!");
+    		test_passed = false;
+    	}
+
+    	// Create a concrete model of the sensor based on a set of PCL data and a map
+    	if(!ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensor_origin))
     	{
     		ROS_WARN("Failed to model sensor!");
     		test_passed = false;    	
@@ -827,7 +917,7 @@ int main(int argc, char **argv)
     }
     else
     {
-    	ROS_INFO("FUNCTION TEST PASSED");
+    	ROS_INFO("LEARN PARAMS FUNCTION TESTING PASSED");
     	nh_ptr->setParam("/ispl/success", true);
     }
 
