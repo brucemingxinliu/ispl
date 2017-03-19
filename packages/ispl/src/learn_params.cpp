@@ -10,6 +10,9 @@
 #include <pcl/point_types.h>
 #include <pcl/features/feature.h>
 
+#include <iostream>
+#include <fstream>
+
 #define PI 3.159265
 // Used for numerical integration of Gaussian functions
 #define INTEGRAL_STEPS 1000
@@ -264,12 +267,19 @@ private:
 	// A computational-only parameter of the model. Represents max %difference from z_max that the measurement can be
 	//   Occurs due to the fact that computers cannot process infinitesimal width distributions
 	float z_max_tol;
+
+	std::ofstream param_file;
 };
 
 bool SensorModel::createModel(PointCloud * point_cloud, 
 								MapFixture * map_plane,
 								Point * origin)
 {
+	// for debug only
+	param_file.open("param_convergence.txt");
+	// Same tho
+	param_file << "z_hit" << "z_short" << "z_max" << "z_rand" << "sig_hit" << "lam_short" << std::endl;
+	
 	int cloud_size = point_cloud->points.size();
 
 	ROS_INFO("Modeling sensor based on %d points", cloud_size);
@@ -320,8 +330,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// Convergence learning parameters
 	bool converged = false;
 	int i = 0;
-	// Make maybe 50 later?
-	int max_i = 50;
+	int max_i = 10;
 
 	// ASSUME for now. This is the intrinsic noise parameter of the meas model
 	sig_hit = 0.1;
@@ -399,11 +408,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			e_short_sum += e_short[j];
 		}
 
-		for(int j = 0; j < e_short.size(); j++)
-		{
-			e_short_ext_sum += e_short[j]*vectorLength(sensor_origin, data_cloud[j]);
-		}
-
 		for(int j = 0; j < e_max.size(); j++)
 		{
 			e_max_sum += e_max[j];
@@ -417,6 +421,11 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		for(int j = 0; j < e_hit_offset.size(); j++)
 		{
 			e_hit_offset_sum += pow(e_hit_offset[j], 2);
+		}
+
+		for(int j = 0; j < e_short.size(); j++)
+		{
+			e_short_ext_sum += e_short[j]*vectorLength(sensor_origin, data_cloud[j]);
 		}
 
 		// Compute each four of these parameters (at least for this iteration)
@@ -434,7 +443,10 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		ROS_INFO("z_max: %f", z_max);
 		ROS_INFO("z_rand: %f", z_rand);
 		ROS_INFO("sig_hit: %f", sig_hit);
-		ROS_INFO("lam_short: %f", lam_short);
+		ROS_INFO("lam_short: %f \n", lam_short);
+
+
+		param_file << z_hit << z_short << z_max << z_rand << sig_hit << lam_short << std::endl;
 
 		i++;
 	}
@@ -683,7 +695,6 @@ float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 	return p_rand;
 }
 
-
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
@@ -723,6 +734,7 @@ int main(int argc, char **argv)
     	Point sensor_origin(0,0,0);
 
     	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
+    	// These are current assumptions that 
     	if(!ourMap.setCorners(Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)))
     	{
     		ROS_WARN("FAILED TO SET CORNERS ON MAP FIXTURE");
@@ -754,7 +766,6 @@ int main(int argc, char **argv)
     		ROS_WARN("Failed to model sensor!");
     		test_passed = false;    	
     	}
-
     }
 
     // Check this-node functional testing and report to user
