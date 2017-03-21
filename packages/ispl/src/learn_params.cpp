@@ -19,13 +19,9 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 // Point cloud of sensor measurements to be used to make our sensor model of parameters
 PointCloud g_point_cloud_data;
 
-// ROS global pointers 
-ros::NodeHandle * nh_ptr;
-ros::Publisher * pc_pub_ptr;
-
 // Variables that help the main program wait until ROS topics for input data are received
-bool g_cloud_received = false;
-bool g_scan_received = false;
+bool g_cloud_received;
+bool g_scan_received;
 
 /*
 Function: sort_cloud_slice()
@@ -50,7 +46,6 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 }
 
 /*
-
 */
 void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 {
@@ -58,6 +53,8 @@ void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 	sort_cloud_slice(cloud_holder);
 }
 
+/*
+*/
 void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 {
 	g_scan_received = true;
@@ -123,15 +120,10 @@ int main(int argc, char **argv)
 
     ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, scanCB);
     ros::Subscriber pc_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
-
+    
+    // Publish point cloud for reference by other nodes, not currently really useful
 	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
     pc_pub_ptr = &pc_pub;
-
-    // BELOW: Renovations underway
-
-    // Publish point cloud for reference by other nodes, not currently really useful
-    //point_cloud->header.frame_id = "map";
-    //pc_pub_ptr->publish(*point_cloud);
 
     // Instantiate a sensor model
     SensorModel ourSensor;
@@ -172,9 +164,11 @@ int main(int argc, char **argv)
 	    		ROS_WARN("Failed to find number intersections in map/sensor testing!");
 				test_passed = false;
 	    	}	
+
+
     	}
 
-    	// Create a concrete model of the sensor based on a set of PCL data and a map
+    	// Create a model of the sensor based on a set of PCL data and a defined map
     	if(!ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensorOrigin))
     	{
     		ROS_WARN("Failed to model sensor!");

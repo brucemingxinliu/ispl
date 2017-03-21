@@ -16,6 +16,9 @@
 typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
+// ROS package global pointers 
+ros::NodeHandle * nh_ptr;
+ros::Publisher * pc_pub_ptr;
 
 /////////////////////////////          MAP FIXTURE       /////////////////////
 class MapFixture

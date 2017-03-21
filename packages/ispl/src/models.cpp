@@ -8,7 +8,6 @@
 //////////////    SENSOR MODEL CLASS          /////////////////
 SensorModel::SensorModel()
 {
-
 }
 
 // Set the starting values of the intrinsic noise parameters that we want to have converge after applying our algorithm
@@ -63,6 +62,9 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		//ROS_INFO("Point: x=%f, y=%f, z=%f.", point_cloud->points[i].x,point_cloud->points[i].y, point_cloud->points[i].z);
 	}
 
+	point_cloud->header.frame_id = "map";
+    pc_pub_ptr->publish(*point_cloud);
+
     // Determine which point is the farthest away from the sensor, call this the longest range, which is thus furthest_z
     float longest_range = -1; 
     float range;
@@ -110,6 +112,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	int i = 0;
 	int max_i = 20;
 
+	// Holds the probabilities of each event happening as returned from p_xxx type function
 	float p_hit_val;
 	float p_short_val;
 	float p_max_val;
