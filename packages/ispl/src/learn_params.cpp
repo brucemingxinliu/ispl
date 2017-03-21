@@ -354,6 +354,7 @@ bool SensorModel::setInitialParams(float z_hit_init, float z_short_init, float z
 		lam_short = lam_short_init;
 	}
 	ROS_INFO("Setting initial model parameters = {%f, %f, %f, %f | %f, %f}", z_hit, z_short, z_max, z_rand, sig_hit, lam_short);
+	return true;
 }
 
 bool SensorModel::createModel(PointCloud * point_cloud, 
@@ -860,10 +861,10 @@ bool runIntersectionTesting(SensorModel * ourSensor, MapFixture * ourMap, Point 
 	std::vector<Point> test_points;
 	test_points.push_back(Point(0, 1, 1.5));
 	test_points.push_back(Point(0.2, 0.1, 1));
-	test_points.push_back(Point(0.2, 0, 1));
+	test_points.push_back(Point(0.2, 5, 1));
 	test_points.push_back(Point(-2, 5, 3));
 	test_points.push_back(Point(-1, 6, 0));
-	test_points.push_back(Point(0.5, 0, 0.5));
+	test_points.push_back(Point(0.5, 0.02, 0.5));
 
 	// Iterate through all test cases added above
 	for(int i = 0; i < test_points.size(); i++)
@@ -886,6 +887,7 @@ int main(int argc, char **argv)
     nh_ptr = &nh;
 
     bool test_active = true;
+    bool test_active2 = false;
     bool test_passed = true;
 
     g_scan_received = false;
@@ -921,16 +923,20 @@ int main(int argc, char **argv)
     		ROS_WARN("FAILED TO SET CORNERS ON MAP FIXTURE");
     	}
 
-    	if(!runIntersectionTesting(&ourSensor, &ourMap, sensorOrigin))
-    	{
-			test_passed = false;
-    	}
-
-
+    	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
     	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 0.2))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
+    	}
+
+    	if(test_active2 == true)
+    	{
+	    	// Run a test suite of various points that reports intersection locations
+	    	if(!runIntersectionTesting(&ourSensor, &ourMap, sensorOrigin))
+	    	{
+				test_passed = false;
+	    	}	
     	}
 
     	// Create a concrete model of the sensor based on a set of PCL data and a map
@@ -952,7 +958,7 @@ int main(int argc, char **argv)
     	nh_ptr->setParam("/ispl/success", true);
     }
 
-    // Publish found parameters
+    // Publish found parameters contained within sensor model
     nh_ptr->setParam("/ispl/z_hit", ourSensor.z_hit);
     nh_ptr->setParam("/ispl/z_short", ourSensor.z_short);
     nh_ptr->setParam("/ispl/z_max", ourSensor.z_max);
@@ -960,7 +966,7 @@ int main(int argc, char **argv)
     nh_ptr->setParam("/ispl/sig_hit", ourSensor.sig_hit);
     nh_ptr->setParam("/ispl/lam_short", ourSensor.lam_short);
 
-    // Tell test node that we are done
+    // Tell test node that we are done, so it can start doing things
     nh_ptr->setParam("/learning_done", true);
    
     return 0;
