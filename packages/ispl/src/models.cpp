@@ -5,7 +5,137 @@
 #include <ispl/models.h>
 #include <ispl/math_functions.h>
 
-//////////////    SENSOR MODEL CLASS          /////////////////
+
+
+///////////         MAP FIXTURE CLASS MEMBER FUNCTIONS       //////////
+// Map constructor. Sets the "maps" thickness to a chosen value
+MapFixture::MapFixture()
+{
+	plane_thickness_tol = 0.01;
+}
+
+/*
+Function: MapFixture::setCorners
+Input: Four co-planar points that define the "screen" of the test fixture
+Output: Sets various mathematical parameters related to the map fixture setup, returns 'true' if successful
+Notes: The four input points should be very approximately co-planar or validation will fail and all bets are off
+		Also, because I am an engineer and not a mathematician, I highly blur the line between what 
+		a "point" is versus a "vector". Deal with it.
+*/
+bool MapFixture::setCorners(Point corner1, 
+						Point corner2, 
+						Point corner3, 
+						Point corner4)
+{
+	// Just go ahead and store these points because they define the fixture
+	// This poinnt is the "origin frame" of the plane
+	MapFixture::origin_corner = corner1;
+	// These next two points are needed to define a single plane
+	MapFixture::second_corner = corner2;
+	MapFixture::third_corner = corner3;
+	// Can be used to check our work and check that the user knows what "co-planar" means
+	MapFixture::validation_corner = corner4;
+
+	//ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
+
+	// Define a vector from origin on plane to a point on the plane
+	Point first_vector(second_corner.x - origin_corner.x, 
+						second_corner.y - origin_corner.y,
+						second_corner.z - origin_corner.z);
+
+	//ROS_INFO("TEST2: point(%f,%f,%f) x point(%f,%f,%f)...", third_corner.x,third_corner.y,third_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
+
+	// Define another vector from origin on plane to another point on plane
+	Point second_vector(third_corner.x - origin_corner.x, 
+						third_corner.y - origin_corner.y,
+						third_corner.z - origin_corner.z);
+
+	// Calculate the (normalized) cross product of the two vectors, which will give us
+	//   three of the parameters of the plane
+	plane_normal = unitCrossProduct(first_vector, second_vector);
+
+	// The fourth parameter of the plane is a function of other already-found parameters
+	//   Think of it like an 'offset' value that is dependent on the rest of the plane parameters
+	plane_parameter = -(plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
+	//ROS_INFO("PLANE EQUATION IS: %f, %f, %f, %f", plane_normal.x, plane_normal.y, plane_normal.z, plane_parameter);
+	return true;
+}
+
+bool MapFixture::validateCorner(Point testPoint)
+{
+	// The following equation for the distance from the testPoint to the MapFixture plane is a well known 3D-geometry formula
+	float numerator = plane_normal.x * testPoint.x + plane_normal.y * testPoint.y + plane_normal.z * testPoint.z + plane_parameter;
+	float denominator = sqrt(pow(plane_normal.x, 2) + pow(plane_normal.y, 2) + pow(plane_normal.z, 2));
+	//ROS_INFO("num = %f \n denom = %f", numerator, denominator);
+	float point_to_plane_distance = numerator/denominator;
+	ROS_INFO("Distance p 2 p = %f \n", point_to_plane_distance);
+
+	if(point_to_plane_distance <= plane_thickness_tol)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+Point MapFixture::rayTrace(Point origin, Point rayPoint)
+{
+	float x1 = origin.x;
+	float y1 = origin.y;
+	float z1 = origin.z;
+	//ROS_INFO("Origin %f %f %f", x1, y1, z1);
+
+	float a = rayPoint.x;
+	float b = rayPoint.y;
+	float c = rayPoint.z;
+	//ROS_INFO("RayPt %f %f %f", a, b, c);
+
+	float A = plane_normal.x;
+	float B = plane_normal.y;
+	float C = plane_normal.z;
+	float D = plane_parameter;
+
+	//ROS_INFO("2PLANE EQUATION IS: %f, %f, %f, %f", A, B, C, D);
+
+	// Equation credit (and reference for those mathematically curious) goes to:
+	//    http://www.ambrsoft.com/TrigoCalc/Plan3D/PlaneLineIntersection_.htm
+
+	// This is the main calculation term, which is common to each of the three dimensions intersection points
+	float common_term = (A*x1 + B*y1 + C*z1 + D)/(A*a + B*b + C*c); 
+	// Calculate the intersection point 
+	float intersection_x = x1 - (a*common_term);
+	float intersection_y = y1 - (b*common_term);
+	float intersection_z = z1 - (c*common_term);
+	//ROS_INFO("Common term: %f, Intersection pts: %f, %f, %f", common_term, intersection_x, intersection_y, intersection_z);
+
+	if(!std::isfinite(intersection_x) || !std::isfinite(intersection_y) || !std::isfinite(intersection_z))
+	{
+		ROS_WARN("INVALID INTERSECTION POINT: One of the point coordinates was inf or nan!");
+	}
+	return Point (intersection_x, intersection_y, intersection_z);
+}
+
+Point MapFixture::unitCrossProduct(Point u, Point v)
+{
+	float a = u.y*v.z - u.z*v.y;
+	float b = u.z*v.x - u.x*v.z;
+	float c = u.x*v.y - u.y*v.x;
+	float length = a*a + b*b + c*c;
+	a = a/length;
+	b = b/length;
+	c = c/length;
+
+	return Point(a,b,c);
+}
+
+Point MapFixture::getPlaneNormal()
+{
+	return plane_normal;
+}
+
+///////////     SENSOR MODEL CLASS MEMBER FUNCTIONS     /////////////////
 SensorModel::SensorModel()
 {
 }
@@ -542,114 +672,4 @@ float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 		p_rand = 1/furthest_z;
 	}
 	return p_rand;
-}
-
-/////////////////         MAP MEMBER FUNCTIONS       //////////
-// Map constructor. Sets the "maps" thickness to a chosen value
-MapFixture::MapFixture()
-{
-	plane_thickness_tol = 0.01;
-}
-
-/*
-Function: MapFixture::setCorners
-Input: Four co-planar points that define the "screen" of the test fixture
-Output: Sets various mathematical parameters related to the map fixture setup, returns 'true' if successful
-Notes: The four input points should be very approximately co-planar or validation will fail and all bets are off
-		Also, because I am an engineer and not a mathematician, I highly blur the line between what 
-		a "point" is versus a "vector". Deal with it.
-*/
-bool MapFixture::setCorners(Point corner1, 
-						Point corner2, 
-						Point corner3, 
-						Point corner4)
-{
-	// Just go ahead and store these points because they define the fixture
-	// This poinnt is the "origin frame" of the plane
-	MapFixture::origin_corner = corner1;
-	// These next two points are needed to define a single plane
-	MapFixture::second_corner = corner2;
-	MapFixture::third_corner = corner3;
-	// Can be used to check our work and check that the user knows what "co-planar" means
-	MapFixture::validation_corner = corner4;
-
-	//ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
-
-	// Define a vector from origin on plane to a point on the plane
-	Point first_vector(second_corner.x - origin_corner.x, 
-						second_corner.y - origin_corner.y,
-						second_corner.z - origin_corner.z);
-
-	//ROS_INFO("TEST2: point(%f,%f,%f) x point(%f,%f,%f)...", third_corner.x,third_corner.y,third_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
-
-	// Define another vector from origin on plane to another point on plane
-	Point second_vector(third_corner.x - origin_corner.x, 
-						third_corner.y - origin_corner.y,
-						third_corner.z - origin_corner.z);
-
-	// Calculate the (normalized) cross product of the two vectors, which will give us
-	//   three of the parameters of the plane
-	plane_normal = unitCrossProduct(first_vector, second_vector);
-
-	// The fourth parameter of the plane is a function of other already-found parameters
-	//   Think of it like an 'offset' value that is dependent on the rest of the plane parameters
-	plane_parameter = -(plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
-	//ROS_INFO("PLANE EQUATION IS: %f, %f, %f, %f", plane_normal.x, plane_normal.y, plane_normal.z, plane_parameter);
-	return true;
-}
-
-bool MapFixture::validateCorner(Point testPoint)
-{
-	float point_to_plane_distance;
-	return true;
-}
-
-Point MapFixture::rayTrace(Point origin, Point rayPoint)
-{
-	float x1 = origin.x;
-	float y1 = origin.y;
-	float z1 = origin.z;
-	//ROS_INFO("Origin %f %f %f", x1, y1, z1);
-
-	float a = rayPoint.x;
-	float b = rayPoint.y;
-	float c = rayPoint.z;
-	//ROS_INFO("RayPt %f %f %f", a, b, c);
-
-	float A = plane_normal.x;
-	float B = plane_normal.y;
-	float C = plane_normal.z;
-	float D = plane_parameter;
-
-	//ROS_INFO("2PLANE EQUATION IS: %f, %f, %f, %f", A, B, C, D);
-
-	// Equation credit (and reference for those mathematically curious) goes to:
-	//    http://www.ambrsoft.com/TrigoCalc/Plan3D/PlaneLineIntersection_.htm
-
-	// This is the main calculation term, which is common to each of the three dimensions intersection points
-	float common_term = (A*x1 + B*y1 + C*z1 + D)/(A*a + B*b + C*c); 
-	// Calculate the intersection point 
-	float intersection_x = x1 - (a*common_term);
-	float intersection_y = y1 - (b*common_term);
-	float intersection_z = z1 - (c*common_term);
-	//ROS_INFO("Common term: %f, Intersection pts: %f, %f, %f", common_term, intersection_x, intersection_y, intersection_z);
-
-	if(!std::isfinite(intersection_x) || !std::isfinite(intersection_y) || !std::isfinite(intersection_z))
-	{
-		ROS_WARN("INVALID INTERSECTION POINT: One of the point coordinates was inf or nan!");
-	}
-	return Point (intersection_x, intersection_y, intersection_z);
-}
-
-Point MapFixture::unitCrossProduct(Point u, Point v)
-{
-	float a = u.y*v.z - u.z*v.y;
-	float b = u.z*v.x - u.x*v.z;
-	float c = u.x*v.y - u.y*v.x;
-	float length = a*a + b*b + c*c;
-	a = a/length;
-	b = b/length;
-	c = c/length;
-
-	return Point(a,b,c);
 }

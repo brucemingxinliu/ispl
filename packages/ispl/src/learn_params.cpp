@@ -2,15 +2,12 @@
 // Created Feb 23 2017 by Trent Ziemer
 // Last updated (NEEDS UPDATE) by Trent Ziemer
 
-
-
 // Includes map fixture and sensor model classes
 #include <ispl/models.h>
 
 // File IO for C++
 #include <iostream>
 #include <fstream>
-
 
 // Define shorthand names for PCL points and clouds
 typedef pcl::PointXYZ Point;
@@ -103,6 +100,28 @@ bool runIntersectionTesting(SensorModel * ourSensor, MapFixture * ourMap, Point 
 	}
     return true;
 }
+
+bool runPlaneValidation(MapFixture * ourMap)
+{
+	float left_point = -5;
+	float right_point = 5;
+	float delta_point = 0.5;
+	for(float i = left_point; i < right_point; i += delta_point)
+	{
+		for(float j = left_point; j < right_point; j += delta_point)
+		{
+			for(float k = left_point; k < right_point; k += delta_point)
+			{
+				Point planePoint = ourMap->getPlaneNormal();
+				ROS_INFO("Test Point (%f, %f, %f)", i, j, k);
+				ROS_INFO("Plane Point (%f, %f, %f)", planePoint.x, planePoint.y, planePoint.z);
+				ourMap->validateCorner(Point(i, j, k));
+			}
+		}
+	}
+
+	return false;
+}
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
@@ -112,7 +131,7 @@ int main(int argc, char **argv)
     nh_ptr = &nh;
 
     bool test_active = true;
-    bool test_active2 = false;
+    bool test_active2 = true;
     bool test_passed = true;
 
     g_scan_received = false;
@@ -165,6 +184,11 @@ int main(int argc, char **argv)
 				test_passed = false;
 	    	}	
 
+	    	if(!runPlaneValidation(&ourMap))
+	    	{	    		
+	    		ROS_WARN("Failed to validate validateCorner function!");
+				test_passed = false;
+	    	}
 
     	}
 

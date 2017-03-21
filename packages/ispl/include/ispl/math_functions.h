@@ -1,9 +1,11 @@
+// Internal Sensor Parameter Learning node
+// Created Mar 9 2017 by Trent Ziemer
+// Last updated Mar 21 2017 by Trent Ziemer
 
 // Used for numerical integration of Gaussian functions
 #define INTEGRAL_STEPS 1000
 #define PI 3.159265
 
-/////////////////////           MATHEMATICS FUNCTIONS           ////////////////
 // Calculates the y value of the normal distribution at some point x given some mean and variance
 float normalDistribution(float x, float mean, float variance)
 {
@@ -34,7 +36,7 @@ float vectorLength(Point a, Point b)
 	return sqrt((vector.x)*(vector.x) + (vector.y)*(vector.y) + (vector.z)*(vector.z));
 }
 
-// Checks if two values are within a specified absolute tolerance
+// Checks if two values are within a specified relative tolerance
 // This is used in the main algorithm to check if the new value has changed from the old value. 
 // If not, then the variable has converged. Also, this deals with some 0/NaN values.
 bool checkConvergence(float new_val, float old_val, float tolerance)
@@ -44,6 +46,11 @@ bool checkConvergence(float new_val, float old_val, float tolerance)
 	if (difference == 0)
 	{
 		return true;
+	}
+	else if (!std::isfinite(difference))
+	{
+		ROS_WARN("Checked convergence on a non-finite value (old or new)! Failed!");
+		return false;
 	}
 	return (fabs(difference/new_val) < tolerance);
 }
