@@ -22,7 +22,6 @@ cs_add_executable(learn_params src/learn_params.cpp)
 cs_add_executable(test_ispl src/test_ispl.cpp)
 
 cs_add_library(models src/models.cpp)
-
 target_link_libraries(learn_params models)
 
 #the following is required, if desire to link a node in this package with a library created in this same package
