@@ -14,6 +14,7 @@ ros::NodeHandle * nh_ptr;
 bool g_received_measurements;
 
 // This is a test function for an ISPl paramter value to check that it is a reasonable value
+// This should be updated with new constraints whenever is appropriate
 bool is_reasonable_param(float sensor_param_val)
 {
     // Liable to change
@@ -44,9 +45,9 @@ int main(int argc, char **argv)
 
     ros::Subscriber meas_sub = nh.subscribe("/ispl/meas_pc", 1, cloudCB);
 
-    ROS_INFO("Starting Instrinsic Sensor Parameter Learning algorithm test module");
+    ROS_INFO("Starting ISPL algorithm test node");
 
-    // Wait for the learn_params node to finish
+    // Wait for the learn_params node to finish, then continue with checking for params
     while(ros::ok())
     {
     	if(nh_ptr->hasParam("/learning_done"))
@@ -56,7 +57,7 @@ int main(int argc, char **argv)
         ros::spinOnce();
     }
 
-    // These represent the calculated output parameter values by the node
+    // These represent the calculated output parameter values from the node
     float z_hit;;
     float z_short;
     float z_max;

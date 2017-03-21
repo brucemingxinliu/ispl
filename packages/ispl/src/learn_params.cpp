@@ -1,6 +1,8 @@
-// Sensor Parameter learning node
+// Internal Sensor Parameter Learning node
 // Created Feb 23 2017 by Trent Ziemer
 // Last updated (NEEDS UPDATE) by Trent Ziemer
+
+// Various ROS headers
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>
 #include <std_msgs/Float32.h>
@@ -13,29 +15,34 @@
 // Includes map fixture and sensor model classes
 #include <ispl/models.h>
 
+// File IO for C++
 #include <iostream>
 #include <fstream>
 
-#define PI 3.159265
 // Used for numerical integration of Gaussian functions
 #define INTEGRAL_STEPS 1000
+#define PI 3.159265
+
 // Define shorthand names for PCL points and clouds
 typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 
-// Point cloud of sensor measurements to make model off of
+// Point cloud of sensor measurements to be used to make our sensor model of parameters
 PointCloud g_point_cloud_data;
 
 // ROS global pointers 
 ros::NodeHandle * nh_ptr;
 ros::Publisher * pc_pub_ptr;
 
-// Variables that help the main program wait until ros topics are received
+// Variables that help the main program wait until ROS topics for input data are received
 bool g_cloud_received = false;
 bool g_scan_received = false;
 
 /*
-
+Function: sort_cloud_slice()
+Input: A rostopic Point Cloud pointer, specifically from a rostopic Point cloud callback function
+Output: Stores all points from input cloud into a global point cloud for points between two z values.
+Notes: WARNING: This function is hacky.
 */
 void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
@@ -67,6 +74,8 @@ void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 	g_scan_received = true;
 }
 
+// Waits for GLOBALLY DEFINED BOOLEANS to become true for a set number of seconds that are triggered by specific ros topics
+// Quick and dirty ROS-based initialization
 bool waitForSubs()
 {
 	int count = 0;
@@ -138,11 +147,12 @@ public:
 	bool setCorners(Point, Point, Point, Point);
 
 	Point rayTrace(Point, Point);
+	MapFixture();
 
 private:
 	// Point from which to conventionally measure things from wrt the plane
 	Point origin_corner;
-	// Other two defining points in the plane
+	// Other two defining points in the plane. Three points define a plane.
 	Point second_corner;
 	Point third_corner;
 	// Technically superfluous, but can use for numerical self-validation 
@@ -153,16 +163,25 @@ private:
 	// Together with the normal, this plane_parameter fully defines the equation of a 3D plane
 	float plane_parameter;
 
-	// Calcultes the unit-length (normalized) cross product between two points, presumably in the plane but not necessarily
+	// Max distance that a point can be from the plane and still be considered "on" the plane. Used for validation of points.
+	float plane_thickness_tol;
+
+	// Calculates the unit-length (normalized) cross product between two points, presumably in the plane but not necessarily
 	Point unitCrossProduct(Point, Point);
+
+	// Checks that the given point is close enough (by private tolerance variable) to being on the plane (should already be defined)
+	bool validateCorner(Point);
 };
+
+MapFixture::MapFixture()
+{
+	plane_thickness_tol = 0.01;
+}
 
 /*
 Function: MapFixture::setCorners
-
 Input: Four co-planar points that define the "screen" of the test fixture
 Output: Sets various mathematical parameters related to the map fixture setup, returns 'true' if successful
-
 Notes: The four input points should be very approximately co-planar or validation will fail and all bets are off
 		Also, because I am an engineer and not a mathematician, I highly blur the line between what 
 		a "point" is versus a "vector". Deal with it.
@@ -206,6 +225,12 @@ bool MapFixture::setCorners(Point corner1,
 	return true;
 }
 
+bool validateCorner(Point testPoint)
+{
+	float point_to_plane_distance;
+	return true;
+}
+
 Point MapFixture::rayTrace(Point origin, Point rayPoint)
 {
 	float x1 = origin.x;
@@ -224,6 +249,7 @@ Point MapFixture::rayTrace(Point origin, Point rayPoint)
 	float D = plane_parameter;
 
 	//ROS_INFO("2PLANE EQUATION IS: %f, %f, %f, %f", A, B, C, D);
+
 	// Equation credit (and reference for those mathematically curious) goes to:
 	//    http://www.ambrsoft.com/TrigoCalc/Plan3D/PlaneLineIntersection_.htm
 
@@ -235,13 +261,11 @@ Point MapFixture::rayTrace(Point origin, Point rayPoint)
 	float intersection_z = z1 - (c*common_term);
 	//ROS_INFO("Common term: %f, Intersection pts: %f, %f, %f", common_term, intersection_x, intersection_y, intersection_z);
 
-	// Assemble three floats into a single point object
-	Point intersection_point(intersection_x, intersection_y, intersection_z);
 	if(!std::isfinite(intersection_x) || !std::isfinite(intersection_y) || !std::isfinite(intersection_z))
 	{
 		ROS_WARN("INVALID INTERSECTION POINT: One of the point coordinates was inf or nan!");
 	}
-	return intersection_point;
+	return Point (intersection_x, intersection_y, intersection_z);
 }
 
 Point MapFixture::unitCrossProduct(Point u, Point v)
@@ -830,6 +854,28 @@ float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 	return p_rand;
 }
 
+//////////////////////////     FUNCTIONAL TESTING    /////////////////
+bool runIntersectionTesting(SensorModel * ourSensor, MapFixture * ourMap, Point sensorOrigin)
+{
+	std::vector<Point> test_points;
+	test_points.push_back(Point(0, 1, 1.5));
+	test_points.push_back(Point(0.2, 0.1, 1));
+	test_points.push_back(Point(0.2, 0, 1));
+	test_points.push_back(Point(-2, 5, 3));
+	test_points.push_back(Point(-1, 6, 0));
+	test_points.push_back(Point(0.5, 0, 0.5));
+
+	// Iterate through all test cases added above
+	for(int i = 0; i < test_points.size(); i++)
+	{
+		Point intersection_point = ourMap->rayTrace(sensorOrigin, test_points[i]);
+		
+		ROS_INFO("The intersection of the line from (%f, %f, %f) to (%f, %f, %f),", 
+			sensorOrigin.x, sensorOrigin.y, sensorOrigin.z, test_points[i].x, test_points[i].y, test_points[i].z);
+		ROS_INFO("is located at the point (%f, %f, %f).", intersection_point.x, intersection_point.y,intersection_point.z);
+	}
+    return true;
+}
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
@@ -851,12 +897,14 @@ int main(int argc, char **argv)
  	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
     pc_pub_ptr = &pc_pub;
 
-    // Start non ros stuff
     // Instantiate a sensor model
     SensorModel ourSensor;
 
 	// Instantiate our map model
 	MapFixture ourMap;
+
+    // Instantiate the sensor location as being at the origin of our 'universe', this is a basic assumption of our map model
+	Point sensorOrigin(0,0,0);
 
     if(test_active == true)
     {
@@ -866,44 +914,27 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	// Define the sensor as being at the origin of our 'universe', this is a basic assumption of our map model
-    	Point sensor_origin(0,0,0);
-
     	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
-    	// These are current assumptions that 
+    	// These are current assumptions that can/should/will/may change
     	if(!ourMap.setCorners(Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)))
     	{
     		ROS_WARN("FAILED TO SET CORNERS ON MAP FIXTURE");
     	}
 
-    	std::vector<Point> test_points;
-    	/*
-    	test_points.push_back(Point(0, 1, 1.5));
-    	test_points.push_back(Point(0.2, 0.1, 1));
-    	test_points.push_back(Point(0.2, 0, 1));
-    	test_points.push_back(Point(-2, 5, 3));
-    	test_points.push_back(Point(-1, 6, 0));
-    	test_points.push_back(Point(0.5, 0, 0.5));
-		*/
-
-    	// Iterate through all test cases
-    	for(int i = 0; i < test_points.size(); i++)
+    	if(!runIntersectionTesting(&ourSensor, &ourMap, sensorOrigin))
     	{
-    		Point intersection_point = ourMap.rayTrace(sensor_origin, test_points[i]);
-    		
-    		ROS_INFO("The intersection of the line from (%f, %f, %f) to (%f, %f, %f),", 
-    			sensor_origin.x, sensor_origin.y, sensor_origin.z, test_points[i].x, test_points[i].y, test_points[i].z);
-    		ROS_INFO("is located at the point (%f, %f, %f).", intersection_point.x, intersection_point.y,intersection_point.z);
+			test_passed = false;
     	}
 
-    	if(ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 0.2))
+
+    	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 0.2))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
     	}
 
     	// Create a concrete model of the sensor based on a set of PCL data and a map
-    	if(!ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensor_origin))
+    	if(!ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensorOrigin))
     	{
     		ROS_WARN("Failed to model sensor!");
     		test_passed = false;    	
@@ -913,7 +944,7 @@ int main(int argc, char **argv)
     // Check this-node functional testing and report to user
     if(test_passed == false)
     {
-    	ROS_WARN("FUNCTION TEST FAILED: Something is borked");
+    	ROS_WARN("FUNCTIONAL TESTING FAILED: Something is borked");
     }
     else
     {
