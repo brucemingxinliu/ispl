@@ -30,8 +30,8 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
 
-	float min_z_plane = 0.05;
-	float max_z_plane = 0.15;
+	float min_z_plane = 0.2;
+	float max_z_plane = 0.25;
 	
 	for(int i = 0; i < cloud_size; i++)
 	{
@@ -101,6 +101,8 @@ bool runIntersectionTesting(SensorModel * ourSensor, MapFixture * ourMap, Point 
     return true;
 }
 
+// This function can be used to display distances between various points and the map plane
+// NOTE: currently, it doesnt actually validate the points given automatically (the return from that function is not stored)
 bool runPlaneValidation(MapFixture * ourMap)
 {
 	float left_point = -5;
@@ -114,7 +116,7 @@ bool runPlaneValidation(MapFixture * ourMap)
 			{
 				Point planePoint = ourMap->getPlaneNormal();
 				ROS_INFO("Test Point (%f, %f, %f)", i, j, k);
-				ROS_INFO("Plane Point (%f, %f, %f)", planePoint.x, planePoint.y, planePoint.z);
+				ROS_INFO("Plane Eqn (%f, %f, %f | %f)", planePoint.x, planePoint.y, planePoint.z, ourMap->getPlaneParameter());
 				ourMap->validateCorner(Point(i, j, k));
 			}
 		}
@@ -125,13 +127,17 @@ bool runPlaneValidation(MapFixture * ourMap)
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
+
+	// TO DO:
+	// Check/verify and pray for summing of 4 params to 1
+	// Iterate across various z-heights (at top) and maybe do some analysis
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
 
     bool test_active = true;
-    bool test_active2 = true;
+    bool test_active2 = false;
     bool test_passed = true;
 
     g_scan_received = false;

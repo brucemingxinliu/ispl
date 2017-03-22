@@ -34,6 +34,7 @@ public:
 	bool validateCorner(Point);
 
 	Point getPlaneNormal();
+	float getPlaneParameter();
 private:
 	// Point from which to conventionally measure things from wrt the plane
 	Point origin_corner;

@@ -29,12 +29,12 @@ bool MapFixture::setCorners(Point corner1,
 {
 	// Just go ahead and store these points because they define the fixture
 	// This poinnt is the "origin frame" of the plane
-	MapFixture::origin_corner = corner1;
+	origin_corner = corner1;
 	// These next two points are needed to define a single plane
-	MapFixture::second_corner = corner2;
-	MapFixture::third_corner = corner3;
+	second_corner = corner2;
+	third_corner = corner3;
 	// Can be used to check our work and check that the user knows what "co-planar" means
-	MapFixture::validation_corner = corner4;
+	validation_corner = corner4;
 
 	//ROS_INFO("TEST: point(%f,%f,%f) x point(%f,%f,%f)...", second_corner.x,second_corner.y,second_corner.z,origin_corner.x,origin_corner.y,origin_corner.z);
 
@@ -58,7 +58,16 @@ bool MapFixture::setCorners(Point corner1,
 	//   Think of it like an 'offset' value that is dependent on the rest of the plane parameters
 	plane_parameter = -(plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
 	//ROS_INFO("PLANE EQUATION IS: %f, %f, %f, %f", plane_normal.x, plane_normal.y, plane_normal.z, plane_parameter);
-	return true;
+	
+	// If the fourth (validation corner) is found to be near enough to the plane, then setting the corners was successful
+	if(validateCorner(validation_corner))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 bool MapFixture::validateCorner(Point testPoint)
@@ -133,6 +142,11 @@ Point MapFixture::unitCrossProduct(Point u, Point v)
 Point MapFixture::getPlaneNormal()
 {
 	return plane_normal;
+}
+
+float MapFixture::getPlaneParameter()
+{
+	return plane_parameter;
 }
 
 ///////////     SENSOR MODEL CLASS MEMBER FUNCTIONS     /////////////////
@@ -219,9 +233,11 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		ROS_WARN("COULD NOT FIND furthest_z/longest_range, furthest_z is uninitialized!");
 	}
 
-	// This seems reasonable to me
-	z_max_tol = 0.01;
+	// This seems reasonable to me. Current testing usually shows that it's identically 0, so this may be over precautious
+	z_max_tol = 0.001;
 
+	// Minimum percent that the specific parameter needs to be before the algorithm will stop trying to be more accurate
+	// This represents, for example if = 0.05, a less 5% change between iterations before the learning algorithm will stop itself
 	z_hit_conv_perc = 0.05;
 	z_short_conv_perc = 0.05;
 	z_max_conv_perc = 0.05;
