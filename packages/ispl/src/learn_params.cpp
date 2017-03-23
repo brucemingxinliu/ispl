@@ -30,8 +30,8 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
 
-	float min_z_plane = 0.2;
-	float max_z_plane = 0.25;
+	float min_z_plane = 0.1;
+	float max_z_plane = 0.15;
 	
 	for(int i = 0; i < cloud_size; i++)
 	{
@@ -105,9 +105,11 @@ bool runIntersectionTesting(SensorModel * ourSensor, MapFixture * ourMap, Point 
 // NOTE: currently, it doesnt actually validate the points given automatically (the return from that function is not stored)
 bool runPlaneValidation(MapFixture * ourMap)
 {
+	// Set the size and resolution of our validation space
 	float left_point = -5;
 	float right_point = 5;
 	float delta_point = 0.5;
+	// Iterate through whole space to check if each point lies on the plane
 	for(float i = left_point; i < right_point; i += delta_point)
 	{
 		for(float j = left_point; j < right_point; j += delta_point)
@@ -195,7 +197,6 @@ int main(int argc, char **argv)
 	    		ROS_WARN("Failed to validate validateCorner function!");
 				test_passed = false;
 	    	}
-
     	}
 
     	// Create a model of the sensor based on a set of PCL data and a defined map

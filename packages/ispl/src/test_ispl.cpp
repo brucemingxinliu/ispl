@@ -1,3 +1,6 @@
+// ISPL node testing node
+// Created Mar 11 2017 by Trent Ziemer
+// Last updated Mar 22 by Trent Ziemer
 
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>

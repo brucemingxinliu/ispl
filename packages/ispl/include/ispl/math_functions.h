@@ -54,3 +54,18 @@ bool checkConvergence(float new_val, float old_val, float tolerance)
 	}
 	return (fabs(difference/new_val) < tolerance);
 }
+
+// TO DO: ADD COMMENT HERE
+bool normalized(float a, float b, float c, float d)
+{
+	float tol = 0.001;
+	float sum = a + b + c + d;
+	if(sum > (1 + tol) || sum < (1 - tol))
+	{
+		return false;
+	}
+	else
+	{
+		return true;
+	}
+}

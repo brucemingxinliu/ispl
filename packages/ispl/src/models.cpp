@@ -70,14 +70,14 @@ bool MapFixture::setCorners(Point corner1,
 	}
 }
 
+// This functions check if the specified point is "on" the map (ie is near the plane). 
+// Note: It's prudent to specify your plane as four points, and use the fourth point/corner as validation here before acutally using it as a map
 bool MapFixture::validateCorner(Point testPoint)
 {
 	// The following equation for the distance from the testPoint to the MapFixture plane is a well known 3D-geometry formula
 	float numerator = plane_normal.x * testPoint.x + plane_normal.y * testPoint.y + plane_normal.z * testPoint.z + plane_parameter;
 	float denominator = sqrt(pow(plane_normal.x, 2) + pow(plane_normal.y, 2) + pow(plane_normal.z, 2));
-	//ROS_INFO("num = %f \n denom = %f", numerator, denominator);
 	float point_to_plane_distance = numerator/denominator;
-	ROS_INFO("Distance p 2 p = %f \n", point_to_plane_distance);
 
 	if(point_to_plane_distance <= plane_thickness_tol)
 	{
@@ -86,6 +86,7 @@ bool MapFixture::validateCorner(Point testPoint)
 	else
 	{
 		return false;
+		//ROS_INFO("Point not on plane found! Distance p 2 p = %f \n", point_to_plane_distance);
 	}
 }
 
@@ -206,6 +207,7 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		//ROS_INFO("Point: x=%f, y=%f, z=%f.", point_cloud->points[i].x,point_cloud->points[i].y, point_cloud->points[i].z);
 	}
 
+	// Send an output cloud, for eventual later testing purposes
 	point_cloud->header.frame_id = "map";
     pc_pub_ptr->publish(*point_cloud);
 
@@ -294,9 +296,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			p_max_val = p_max(data_cloud[k], sensor_origin, m);
 			p_rand_val = p_rand(data_cloud[k], sensor_origin, m);
 
-			// This includes "calculate z_i_star":
-			p_hit_offset_val = p_hit_offset(data_cloud[k], sensor_origin, m);
-			//ROS_INFO("p_hit_offset_val = %f", p_hit_offset_val);
 			/*
 			ROS_INFO("p_hit_val = %f", p_hit_val);
 			ROS_INFO("p_short_val = %f", p_short_val);
@@ -304,19 +303,28 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			ROS_INFO("p_rand_val = %f", p_rand_val);
 			*/
 
+			// This includes "calculate z_i_star":
+			p_hit_offset_val = p_hit_offset(data_cloud[k], sensor_origin, m);
+			//ROS_INFO("p_hit_offset_val = %f", p_hit_offset_val);
+
 			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
 
+			float e_hit_val = eta * p_hit_val;
+			float e_short_val = eta * p_short_val;
+			float e_max_val = eta * p_max_val;
+			float e_rand_val = eta * p_rand_val;
+
 			// NOTE: As long as this loops index stays in 0 to size(z) order, then index of data_cloud and these four vectors will match up
-			e_hit.push_back(eta * p_hit_val);
-			e_short.push_back(eta * p_short_val);
-			e_max.push_back(eta * p_max_val);
-			e_rand.push_back(eta * p_rand_val);
+			e_hit.push_back(e_hit_val);
+			e_short.push_back(e_short_val);
+			e_max.push_back(e_max_val);
+			e_rand.push_back(e_rand_val);
 
 			// For sig_hit re-calculation later
 			e_hit_offset.push_back(eta * p_hit_offset_val);
 
 			// Add on this point cloud magnitude to the sum of all magnitudes in the point cloud for later use
-			mag_Z += vectorLength(sensor_origin, data_cloud[k]);
+			// NOTE: Old version used: mag_Z += vectorLength(sensor_origin, data_cloud[k]);
 		}
 
 		// Compute sums...
@@ -357,6 +365,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		float z_rand_old = z_rand;
 		float sig_hit_old = sig_hit;
 		float lam_short_old = lam_short;
+		mag_Z = e_hit_sum + e_short_sum + e_max_sum + e_rand_sum;
 		/*
 		ROS_INFO("BEFORE:");
 		ROS_INFO("z_hit: %f", z_hit);
@@ -371,6 +380,11 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		z_short = e_short_sum/mag_Z;
 		z_max = e_max_sum/mag_Z;
 		z_rand = e_rand_sum/mag_Z;
+
+		if(!normalized(z_hit, z_short, z_max, z_rand))
+		{
+			ROS_WARN("PROBLEM: z_xxx param values are not normalized together!");
+		}
 
 		// This little check avoids NaN's for sig_hit, if dividing 0 by 0
 		if(e_hit_offset_sum == 0)
