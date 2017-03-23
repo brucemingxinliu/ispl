@@ -197,7 +197,7 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 {
 	// for debug?
 	param_file.open("/home/mordoc/param_convergence.txt");
-	param_file << "z_hit" << " " << "z_short" << " " << "z_max" << " " << "z_rand" << " " << "sig_hit" << " " << "lam_short" << std::endl;
+	//param_file << "z_hit" << " " << "z_short" << " " << "z_max" << " " << "z_rand" << " " << "sig_hit" << " " << "lam_short" << std::endl;
 	
 	int cloud_size = point_cloud->points.size();
 
@@ -295,6 +295,15 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			p_short_val = p_short(data_cloud[k], sensor_origin, m);
 			p_max_val = p_max(data_cloud[k], sensor_origin, m);
 			p_rand_val = p_rand(data_cloud[k], sensor_origin, m);
+
+			Point intersection_point = m->rayTrace(sensor_origin, data_cloud[k]);
+			float relative_distance = computeDistance(sensor_origin, data_cloud[k], intersection_point);
+			if(!std::isfinite(relative_distance))
+			{
+				ROS_WARN("Record distances failed: non-finite!");
+			}
+
+			param_file << relative_distance << std::endl;
 
 			/*
 			ROS_INFO("p_hit_val = %f", p_hit_val);
@@ -457,7 +466,8 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			//ROS_INFO("Only %d values converged.", num_conv_param);
 		}
 
-		param_file << z_hit << " " << z_short << " " << z_max << " " << z_rand << " " << sig_hit << " " << lam_short << " " << std::endl;
+		//param_file << z_hit << " " << z_short << " " << z_max << " " << z_rand << " " << sig_hit << " " << lam_short << " " << std::endl;
+		
 		i++;
 	}
 	while((converged == false) && (i < max_i));

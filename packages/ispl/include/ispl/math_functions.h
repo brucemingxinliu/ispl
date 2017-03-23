@@ -69,3 +69,15 @@ bool normalized(float a, float b, float c, float d)
 		return true;
 	}
 }
+
+// TO DO: ADD COMMENT HERE
+float computeDistance(Point origin, Point measured, Point intersection)
+{
+	float measured_distance = vectorLength(origin, measured);
+
+	float expected_distance = vectorLength(origin, intersection);
+
+	float relative_distance = measured_distance/expected_distance;
+
+	return relative_distance;
+}

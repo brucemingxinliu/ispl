@@ -30,8 +30,8 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
 
-	float min_z_plane = 0.1;
-	float max_z_plane = 0.15;
+	float min_z_plane = 0.3;
+	float max_z_plane = 0.5;
 	
 	for(int i = 0; i < cloud_size; i++)
 	{
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
 {
 
 	// TO DO:
-	// Check/verify and pray for summing of 4 params to 1
+	// Output data as histogram for manual analysiss
 	// Iterate across various z-heights (at top) and maybe do some analysis
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
