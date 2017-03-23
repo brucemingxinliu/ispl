@@ -32,6 +32,26 @@ bool is_reasonable_param(float sensor_param_val)
     }
 }
 
+// Waits for GLOBALLY DEFINED BOOLEAN to become true, triggered by specific ros topics
+bool waitForSubs()
+{
+	int count = 0;
+	int time_to_wait = 5;
+	ros::Rate count_rate(1);
+
+	while(count < time_to_wait)
+	{
+		if((g_received_measurements == true))
+		{
+			return true;
+		}
+		ros::spinOnce();
+		count_rate.sleep();
+		count++;
+	}
+	return false;
+}
+
 void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
     g_received_measurements = true;
@@ -45,7 +65,7 @@ int main(int argc, char **argv)
     nh_ptr = &nh;
 
     g_received_measurements = false;
-
+    bool learning_done = false;
     ros::Subscriber meas_sub = nh.subscribe("/ispl/meas_pc", 1, cloudCB);
 
     ROS_INFO("Starting ISPL algorithm test node");
@@ -53,9 +73,14 @@ int main(int argc, char **argv)
     // Wait for the learn_params node to finish, then continue with checking for params
     while(ros::ok())
     {
-    	if(nh_ptr->hasParam("/learning_done"))
+    	if(nh_ptr->getParam("/learning_done", learning_done))
     	{
-            break;
+    		if(learning_done == true)
+			{
+				// If learning is done, reset it so we can run again if desired
+			    nh_ptr->setParam("/learning_done", false);
+			    break;
+    		}
     	}
         ros::spinOnce();
     }

@@ -30,8 +30,8 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
 
-	float min_z_plane = 0.3;
-	float max_z_plane = 0.5;
+	float min_z_plane = -0.5;
+	float max_z_plane = 0.1;
 	
 	for(int i = 0; i < cloud_size; i++)
 	{
