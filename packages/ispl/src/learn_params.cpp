@@ -130,9 +130,11 @@ bool runPlaneValidation(MapFixture * ourMap)
 int main(int argc, char **argv)
 {
 
-	// TO DO:
-	// Output data as histogram for manual analysiss
-	// Iterate across various z-heights (at top) and maybe do some analysis
+	// THINGS TO DO:
+	// Output data as histogram for manual analysis?
+	// Take in /home/mordoc/ispl_data as a histogram and process and then run alg on it
+	// Check if need to filter (my rosbag) incoming data
+	// Iterate across various z-heights (at top) and maybe do some analysis?
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");
