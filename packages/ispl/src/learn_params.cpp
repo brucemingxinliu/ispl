@@ -30,17 +30,28 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
 
-	float min_z_plane = -0.5;
-	float max_z_plane = 0.1;
-	
+	float min_x = 0.69;
+	float max_x = 0.74;
+	float min_y = -0.134;
+	float max_y = 0.47;
+	float min_z_plane = 0.46;
+	float max_z_plane = 1.122;
+
 	for(int i = 0; i < cloud_size; i++)
 	{
 		if ((point_cloud->points[i].z < max_z_plane) && (point_cloud->points[i].z > min_z_plane))
 		{
-			g_point_cloud_data.push_back(point_cloud->points[i]);
+			if ((point_cloud->points[i].y < max_y) && (point_cloud->points[i].y > min_y))
+			{
+				if ((point_cloud->points[i].x < max_x) && (point_cloud->points[i].x > min_x))
+				{
+					g_point_cloud_data.push_back(point_cloud->points[i]);	
+				}
+			}
 		}
 	}
 }
+// Point(0.6935, 0.47187, 1.1), Point(0.724,-0.11783,1.1219), Point(0.70244,0.4681,0.48421), Point(0.73256,-0.133637,0.4661))
 
 /*
 */
@@ -62,12 +73,12 @@ void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
 bool waitForSubs()
 {
 	int count = 0;
-	int time_to_wait = 5;
-	ros::Rate count_rate(1);
+	int time_to_wait = 10000; // ms
+	ros::Rate count_rate(1000); // ms
 
 	while(count < time_to_wait)
 	{
-		if((g_cloud_received == true) && (g_scan_received == true))
+		if((g_cloud_received == true))
 		{
 			return true;
 		}
@@ -173,7 +184,7 @@ int main(int argc, char **argv)
 
     	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
     	// These are current assumptions that can/should/will/may change
-    	if(!ourMap.setCorners(Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)))
+    	if(!ourMap.setCorners(Point(0.6935, 0.47187, 1.1), Point(0.724,-0.11783,1.1219), Point(0.70244,0.4681,0.48421), Point(0.73256,-0.133637,0.4661))) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}

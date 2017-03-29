@@ -626,6 +626,10 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 	}
 	else
 	{
+		if (z_k > z_k_star)
+		{
+			return 0;
+		}
 		float eta = 1/(1 - exp(-lam_short*z_k_star));
 
 		float p_short;
@@ -648,6 +652,7 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 			ROS_INFO("Lam_short = %f", lam_short);
 			ROS_INFO("eta is %f", eta);
 			ROS_INFO("P_short is %f \n", p_short);
+			return 1; // CHANGE THIS TRENT THIS ISNT RIGHT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 		}
 		return p_short;
 	}
@@ -672,6 +677,7 @@ float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 	if(z_k > furthest_z)
 	{
 		ROS_WARN("P MAX Found a measurement larger than the largest measurement furthest_z, that's pretty messed up.");
+		return 0;
 	}
 	else
 	{
@@ -706,6 +712,7 @@ float SensorModel::p_rand(Point meas_point, Point sensor_origin, MapFixture * m)
 	if(z_k > furthest_z)
 	{
 		ROS_WARN("P RAND Found a measurement larger than the largest measurement, that's pretty messed up.");
+		return 0;
 	}
 	else
 	{
