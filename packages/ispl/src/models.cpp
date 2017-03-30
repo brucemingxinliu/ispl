@@ -267,6 +267,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// Overall normalization value
 	float eta;
 
+	bool first_time = true;
 	// Loop following until convergence criteria is met or we reach the maximum number of tries
 	do
 	{
@@ -300,19 +301,12 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			{
 				ROS_WARN("Record relative distance failed: non-finite!");
 			}
+			if(first_time == true)
+			{
+				param_file << relative_distance << std::endl;
+			}
 
-			param_file << relative_distance << std::endl;
-
-			/*
-			ROS_INFO("p_hit_val = %f", p_hit_val);
-			ROS_INFO("p_short_val = %f", p_short_val);
-			ROS_INFO("p_max_val = %f", p_max_val);
-			ROS_INFO("p_rand_val = %f", p_rand_val);
-			*/
-
-			// This includes "calculate z_i_star":
 			p_hit_offset_val = p_hit_offset(data_cloud[k], sensor_origin, m);
-			//ROS_INFO("p_hit_offset_val = %f", p_hit_offset_val);
 
 			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
 
@@ -321,13 +315,14 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			float e_max_val = eta * p_max_val;
 			float e_rand_val = eta * p_rand_val;
 
-				// Compute the magnitude distance from the sensor to the measurment point
-				float z_k = vectorLength(sensor_origin, data_cloud[k]);
+			// Compute the magnitude distance from the sensor to the measurment point
+			float z_k = vectorLength(sensor_origin, data_cloud[k]);
 
-				// Compute the magnitude distance from the sensor to the intersection point
-				float z_k_star = vectorLength(sensor_origin, intersection_point);
+			// Compute the magnitude distance from the sensor to the intersection point
+			float z_k_star = vectorLength(sensor_origin, intersection_point);
 
 			altered_e_hit_sum += e_hit_val*pow(z_k - z_k_star, 2); 
+
 			// NOTE: As long as this loops index stays in 0 to size(z) order, then index of data_cloud and these four vectors will match up
 			e_hit.push_back(e_hit_val);
 			e_short.push_back(e_short_val);
@@ -336,11 +331,9 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 
 			// For sig_hit re-calculation later
 			e_hit_offset.push_back(eta * p_hit_offset_val);
-
-			// Add on this point cloud magnitude to the sum of all magnitudes in the point cloud for later use
-			// NOTE: Old version used: mag_Z += vectorLength(sensor_origin, data_cloud[k]);
 		}
-
+		first_time = false;
+		
 		// Compute sums...
 		for(int j = 0; j < e_hit.size(); j++)
 		{
@@ -380,15 +373,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		float sig_hit_old = sig_hit;
 		float lam_short_old = lam_short;
 		mag_Z = e_hit_sum + e_short_sum + e_max_sum + e_rand_sum;
-		/*
-		ROS_INFO("BEFORE:");
-		ROS_INFO("z_hit: %f", z_hit);
-		ROS_INFO("z_short: %f", z_short);
-		ROS_INFO("z_max: %f", z_max);
-		ROS_INFO("z_rand: %f", z_rand);
-		ROS_INFO("sig_hit: %f", sig_hit);
-		ROS_INFO("lam_short: %f \n", lam_short);
-		*/
+
 		// Compute each four of these parameters (at least for this iteration)
 		z_hit = e_hit_sum/mag_Z;
 		z_short = e_short_sum/mag_Z;
@@ -401,17 +386,14 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		}
 
 		// This little check avoids NaN's for sig_hit, if dividing 0 by 0
-		if(e_hit_offset_sum == 0)
+		if(altered_e_hit_sum == 0)
 		{
 			sig_hit = 0;
 		}
 		else
 		{
-			// OLD: sig_hit = sqrt((e_hit_offset_sum)/(e_hit_sum));
-
+			sig_hit = sqrt(altered_e_hit_sum/e_hit_sum);
 		}
-
-		sig_hit = sqrt(altered_e_hit_sum/e_hit_sum);
 		
 		// This little check avoids NaN's for lam_short, if dividing 0 by 0. Same as above, but I dunno if this one is needed
 		if(e_short_sum == 0)
@@ -468,10 +450,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		if(num_conv_param == 6)
 		{
 			converged = true;
-		}
-		else
-		{
-			//ROS_INFO("Only %d values converged.", num_conv_param);
 		}
 
 		//param_file << z_hit << " " << z_short << " " << z_max << " " << z_rand << " " << sig_hit << " " << lam_short << " " << std::endl;

@@ -36,6 +36,7 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 	float max_y = 0.47;
 	float min_z_plane = 0.46;
 	float max_z_plane = 1.122;
+	int filtering_constant = 1;
 	int counter = 0;
 	for(int i = 0; i < cloud_size; i++)
 	{
@@ -45,7 +46,7 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 			{
 				if ((point_cloud->points[i].x < max_x) && (point_cloud->points[i].x > min_x))
 				{
-					if(counter % 5 == 0)
+					if(counter % 1 == 0)
 					{
 						g_point_cloud_data.push_back(point_cloud->points[i]);		
 					}
@@ -55,7 +56,6 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 		}
 	}
 }
-// Point(0.6935, 0.47187, 1.1), Point(0.724,-0.11783,1.1219), Point(0.70244,0.4681,0.48421), Point(0.73256,-0.133637,0.4661))
 
 /*
 */
@@ -219,11 +219,19 @@ int main(int argc, char **argv)
 	    	}
     	}
 
-    	// Create a model of the sensor based on a set of PCL data and a defined map
-    	if(!ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensorOrigin))
+    	if(g_point_cloud_data.size() > 0)
     	{
-    		ROS_WARN("Failed to model sensor!");
-    		test_passed = false;    	
+	    	// Create a model of the sensor based on a set of PCL data and a defined map
+	    	if(!ourSensor.createModel(&g_point_cloud_data, &ourMap, &sensorOrigin))
+	    	{
+	    		ROS_WARN("Failed to model sensor!");
+	    		test_passed = false;    	
+	    	}
+    	}
+    	else
+    	{
+    		ROS_WARN("Failed to work with this point cloud!");
+    		test_passed = false;
     	}
     }
 
