@@ -5,8 +5,6 @@
 #include <ispl/models.h>
 #include <ispl/math_functions.h>
 
-
-
 ///////////         MAP FIXTURE CLASS MEMBER FUNCTIONS       //////////
 // Map constructor. Sets the "maps" thickness to a chosen value
 MapFixture::MapFixture()

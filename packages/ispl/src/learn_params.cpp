@@ -143,6 +143,7 @@ int main(int argc, char **argv)
 	// THINGS TO DO:
 	// Output data as histogram for manual analysis?
 	// Take in /home/mordoc/ispl_data as a histogram and process and then run alg on it
+	// Input/output data from file so we can pick and choose
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");

@@ -18,6 +18,7 @@ find_package(catkin_simple REQUIRED)
 
 catkin_simple()
 
+cs_add_executable(grab_bag src/grab_bag.cpp)
 cs_add_executable(learn_params src/learn_params.cpp)
 cs_add_executable(test_ispl src/test_ispl.cpp)
 
