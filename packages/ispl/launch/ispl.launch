@@ -1,14 +1,7 @@
 <launch> 
-	<!-- ACTIVATE THIS NODE FOR HW -->
-	<!-- Start Hokuyo LIDAR wobbler data collection
-	<node pkg= "hokuyo_node"  type="hokuyo_node" name= "front_hokuyo_driver" args="_port:=/dev/ttyACM0" output="screen"> 
-	</node> -->
-
-	<!-- ACTIVATE THIS NODE FOR SW -->
-	<!-- Start point cloud rosbag play to take place of Hokuyo wobbler -->
-	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/rosbags/6.bag">\
+	<!-- Start point cloud rosbag play to provide data; alternatively could use an actual data source (like a wobbling LIDAR or Kinect) -->
+	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/rosbags/4.bag">\
 		<!-- <remap from="/wobbler_3d_cloud" to="/ispl/point_cloud" /> -->
-		<remap from="/sensor_msgs/LaserScan" to="/ispl/scan_map" /> <!-- This is for playing from BABS bags -->
 		<remap from="/front_wobbler/point_cloud" to="/ispl/point_cloud" /> <!-- This is for playing from new single-wobbler bags -->
 	</node>
 

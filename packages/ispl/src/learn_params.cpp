@@ -46,7 +46,7 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 			{
 				if ((point_cloud->points[i].x < max_x) && (point_cloud->points[i].x > min_x))
 				{
-					if(counter % 1 == 0)
+					if(counter % filtering_constant == 0)
 					{
 						g_point_cloud_data.push_back(point_cloud->points[i]);		
 					}
@@ -65,19 +65,12 @@ void cloudCB(const PointCloud::ConstPtr& cloud_holder)
 	sort_cloud_slice(cloud_holder);
 }
 
-/*
-*/
-void scanCB(const sensor_msgs::LaserScan::ConstPtr& scan_in)
-{
-	g_scan_received = true;
-}
-
 // Waits for GLOBALLY DEFINED BOOLEANS to become true for a set number of seconds that are triggered by specific ros topics
 // Quick and dirty ROS-based initialization
 bool waitForSubs()
 {
 	int count = 0;
-	int time_to_wait = 10000; // ms
+	int time_to_wait = 12000; // ms
 	ros::Rate count_rate(1000); // ms
 
 	while(count < time_to_wait)
@@ -150,8 +143,6 @@ int main(int argc, char **argv)
 	// THINGS TO DO:
 	// Output data as histogram for manual analysis?
 	// Take in /home/mordoc/ispl_data as a histogram and process and then run alg on it
-	// Check if need to filter (my rosbag) incoming data
-	// Iterate across various z-heights (at top) and maybe do some analysis?
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");
@@ -164,7 +155,6 @@ int main(int argc, char **argv)
     g_scan_received = false;
     g_cloud_received = false;
 
-    ros::Subscriber map_sub = nh.subscribe("/ispl/scan_map", 1, scanCB);
     ros::Subscriber pc_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
     
     // Publish point cloud for reference by other nodes, not currently really useful
@@ -179,6 +169,7 @@ int main(int argc, char **argv)
 	MapFixture ourMap;
 
     // Instantiate the sensor location as being at the origin of our 'universe', this is a basic assumption of our map model
+    // CHANGE THIS WITH NEW INFORMATION TRENT
 	Point sensorOrigin(0,0,0);
 
     if(test_active == true)
@@ -230,7 +221,7 @@ int main(int argc, char **argv)
     	}
     	else
     	{
-    		ROS_WARN("Failed to work with this point cloud!");
+    		ROS_WARN("Failed to try to create model: point cloud is empty!");
     		test_passed = false;
     	}
     }
