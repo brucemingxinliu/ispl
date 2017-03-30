@@ -285,6 +285,8 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		float e_hit_offset_sum = 0;
 		float e_short_ext_sum = 0;
 
+		float altered_e_hit_sum = 0;
+
 		for (int k = 0; k < Z->size(); k++)
 		{
 			p_hit_val = p_hit(data_cloud[k], sensor_origin, m);
@@ -296,7 +298,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			float relative_distance = computeDistance(sensor_origin, data_cloud[k], intersection_point);
 			if(!std::isfinite(relative_distance))
 			{
-				ROS_WARN("Record distances failed: non-finite!");
+				ROS_WARN("Record relative distance failed: non-finite!");
 			}
 
 			param_file << relative_distance << std::endl;
@@ -319,6 +321,13 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			float e_max_val = eta * p_max_val;
 			float e_rand_val = eta * p_rand_val;
 
+				// Compute the magnitude distance from the sensor to the measurment point
+				float z_k = vectorLength(sensor_origin, data_cloud[k]);
+
+				// Compute the magnitude distance from the sensor to the intersection point
+				float z_k_star = vectorLength(sensor_origin, intersection_point);
+
+			altered_e_hit_sum += e_hit_val*pow(z_k - z_k_star, 2); 
 			// NOTE: As long as this loops index stays in 0 to size(z) order, then index of data_cloud and these four vectors will match up
 			e_hit.push_back(e_hit_val);
 			e_short.push_back(e_short_val);
@@ -398,9 +407,12 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		}
 		else
 		{
-			sig_hit = sqrt((e_hit_offset_sum)/(e_hit_sum));
+			// OLD: sig_hit = sqrt((e_hit_offset_sum)/(e_hit_sum));
+
 		}
 
+		sig_hit = sqrt(altered_e_hit_sum/e_hit_sum);
+		
 		// This little check avoids NaN's for lam_short, if dividing 0 by 0. Same as above, but I dunno if this one is needed
 		if(e_short_sum == 0)
 		{
@@ -585,14 +597,14 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 		if(p_hit < 0 || p_hit > 1) //!std::isfinite(p_hit))
 		{
 			ROS_WARN("WARNING: Potential improper p_hit value!");
-			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
-			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
+			//ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+			//ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
 			ROS_INFO("Distance to measured point z_k = %f", z_k);
 			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
 			ROS_INFO("Sig_hit = %f  furthest_z = %f", sig_hit, furthest_z);
-			ROS_INFO("Integrated normalizer = %f", in2);
-			ROS_INFO("eta2 is %f", eta2);
-			ROS_INFO("nd is %f", nd);
+			//ROS_INFO("Integrated normalizer = %f", in2);
+			//ROS_INFO("eta2 is %f", eta2);
+			//ROS_INFO("nd is %f", nd);
 			ROS_INFO("P_hit is %f \n", p_hit);
 		}
 		return p_hit;
@@ -626,7 +638,7 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 	{
 		if (z_k > z_k_star)
 		{
-			return 0;
+			//return 0;
 		}
 		float eta = 1/(1 - exp(-lam_short*z_k_star));
 

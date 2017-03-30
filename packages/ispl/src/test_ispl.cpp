@@ -132,6 +132,8 @@ int main(int argc, char **argv)
         node_level_tests_failed++;
     }
 
+    waitForSubs();
+    
     if (g_received_measurements == false)
     {
         node_level_tests_failed++;

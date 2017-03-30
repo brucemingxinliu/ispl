@@ -36,7 +36,7 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 	float max_y = 0.47;
 	float min_z_plane = 0.46;
 	float max_z_plane = 1.122;
-
+	int counter = 0;
 	for(int i = 0; i < cloud_size; i++)
 	{
 		if ((point_cloud->points[i].z < max_z_plane) && (point_cloud->points[i].z > min_z_plane))
@@ -45,7 +45,11 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 			{
 				if ((point_cloud->points[i].x < max_x) && (point_cloud->points[i].x > min_x))
 				{
-					g_point_cloud_data.push_back(point_cloud->points[i]);	
+					if(counter % 5 == 0)
+					{
+						g_point_cloud_data.push_back(point_cloud->points[i]);		
+					}
+					counter++;
 				}
 			}
 		}
@@ -113,7 +117,7 @@ bool runIntersectionTesting(SensorModel * ourSensor, MapFixture * ourMap, Point 
 }
 
 // This function can be used to display distances between various points and the map plane
-// NOTE: currently, it doesnt actually validate the points given automatically (the return from that function is not stored)
+// NOTE: currently, it doesnt actually validate the points given automatically
 bool runPlaneValidation(MapFixture * ourMap)
 {
 	// Set the size and resolution of our validation space
@@ -193,7 +197,7 @@ int main(int argc, char **argv)
     	}
 
     	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
-    	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 1.5))
+    	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 1, 0.9))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
