@@ -474,10 +474,12 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 
 	if (i < max_i)
 	{
+		ROS_INFO("Converged to solution after %d iterations.", i);
 		return true;
 	}
 	else
 	{
+		ROS_INFO("Failed to converge after running %d iterations.", i);
 		return false;	
 	}
 }

@@ -130,12 +130,15 @@ bool runPlaneValidation(MapFixture * ourMap)
 				Point planePoint = ourMap->getPlaneNormal();
 				ROS_INFO("Test Point (%f, %f, %f)", i, j, k);
 				ROS_INFO("Plane Eqn (%f, %f, %f | %f)", planePoint.x, planePoint.y, planePoint.z, ourMap->getPlaneParameter());
-				ourMap->validateCorner(Point(i, j, k));
+				if(!ourMap->validateCorner(Point(i, j, k)))
+				{
+					return false;
+				}
 			}
 		}
 	}
 
-	return false;
+	return true;
 }
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
@@ -190,7 +193,7 @@ int main(int argc, char **argv)
     	}
 
     	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
-    	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 0.2))
+    	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 0.8, 1.5))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
