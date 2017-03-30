@@ -207,10 +207,6 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		//ROS_INFO("Point: x=%f, y=%f, z=%f.", point_cloud->points[i].x,point_cloud->points[i].y, point_cloud->points[i].z);
 	}
 
-	// Send an output cloud, for eventual later testing purposes
-	point_cloud->header.frame_id = "map";
-    pc_pub_ptr->publish(*point_cloud);
-
     // Determine which point is the farthest away from the sensor, call this the longest range, which is thus furthest_z
     float longest_range = -1; 
     float range;

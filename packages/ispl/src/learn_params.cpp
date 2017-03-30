@@ -143,7 +143,6 @@ bool runPlaneValidation(MapFixture * ourMap)
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
-
 	// THINGS TO DO:
 	// Output data as histogram for manual analysis?
 	// Take in /home/mordoc/ispl_data as a histogram and process and then run alg on it
@@ -166,6 +165,7 @@ int main(int argc, char **argv)
     
     // Publish point cloud for reference by other nodes, not currently really useful
 	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
+	ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/map_pc", 1);
     pc_pub_ptr = &pc_pub;
 
     // Instantiate a sensor model
@@ -245,5 +245,37 @@ int main(int argc, char **argv)
     // Tell test node that we are done, so it can start doing things
     nh_ptr->setParam("/learning_done", true);
    
+   	int time_to_wait = 10; // ms
+	ros::Rate count_rate(1); // ms
+	int count = 0;
+
+	// Create quick map PC
+	PointCloud map_pc;
+	Point a = Point(0.6935, 0.47187, 1.1);
+	Point b = Point(0.724,-0.11783,1.1219);
+	Point c = Point(0.70244,0.4681,0.48421);
+	Point d = Point(0.73256,-0.133637,0.4661);
+	Point e = Point(0,0,0);
+
+   	while(ros::ok() && (count < time_to_wait))
+   	{
+		// Send an output cloud, for other nodes to see
+		g_point_cloud_data.header.frame_id = "lidar_link";
+		pc_pub_ptr->publish(g_point_cloud_data);
+
+		map_pc.push_back(a);
+		map_pc.push_back(b);
+		map_pc.push_back(c);
+		map_pc.push_back(d);
+		map_pc.push_back(e);
+		
+		map_pc.header.frame_id = "lidar_link";
+		pub.publish(map_pc);
+		
+		ros::spinOnce();
+		count_rate.sleep();
+		count++;
+	}
+
     return 0;
 }
