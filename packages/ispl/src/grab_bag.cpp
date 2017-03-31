@@ -74,8 +74,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
                 {
                     if(counter % filtering_constant == 0)
                     {
-                        g_point_cloud_data.push_back(point_cloud->points[i]);    
-                        ROS_INFO("Push backed");
+                        g_point_cloud_data.push_back(point_cloud->points[i]);
                     }
                     counter++;
                 }
@@ -83,24 +82,31 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
         }
     }
 
-    std::ofstream output_data;
-    std::string name = "/home/mordoc/point_cloud.txt";
-    output_data.open(name.c_str());
-    ROS_INFO("OUTPUT DATA...%s", name.c_str());
-    if(output_data.is_open())
+    if(g_point_cloud_data.size() > 0)
     {
-        ROS_INFO("IS OPEN: %lu", g_point_cloud_data.points.size());
+        std::ofstream output_data;
+        std::string name = "/home/mordoc/point_cloud.txt";
+        output_data.open(name.c_str());
+        ROS_INFO("OUTPUT DATA...%s", name.c_str());
+        if(output_data.is_open())
+        {
+            ROS_INFO("IS OPEN: %lu", g_point_cloud_data.points.size());
+        }
+        else
+        {
+            ROS_INFO("IS NOT OPEN");
+        }
+        for(int i = 0; i < g_point_cloud_data.points.size(); i++)
+        {
+            output_data << g_point_cloud_data.points[i].x << ", " << g_point_cloud_data.points[i].y << ", " << g_point_cloud_data.points[i].z << std::endl;
+        }
+        cloud_number++;     
     }
     else
     {
-        ROS_INFO("IS NOT OPEN");
+        ROS_WARN("PROCESSED A CLOUD DOWN TO 0 PTS");
     }
-    for(int i = 0; i < g_point_cloud_data.points.size(); i++)
-    {
-        ROS_INFO("%f", g_point_cloud_data.points[i].x);
-        //output_data << g_point_cloud_data.points[i].x; // << ", " << g_point_cloud_data.points[i].y << ", " << g_point_cloud_data.points[i].z << std::endl;
-    }
-    cloud_number++;
+
     g_cloud_received = true;
 }
  
@@ -114,7 +120,7 @@ int main(int argc, char **argv)
 
     g_cloud_received = false;
 
-    ros::Subscriber meas_sub = nh.subscribe("/front_wobbler/point_cloud", 1, cloudCB);
+    ros::Subscriber meas_sub = nh.subscribe("/pc", 1, cloudCB);
 
     ROS_INFO("Starting BAG GRABBER");
     waitForSubs();
