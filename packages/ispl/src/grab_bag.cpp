@@ -56,17 +56,35 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
     {
         ROS_INFO("CLOUD CB found a cloud of size %d!", cloud_size);
     }
+    /* FOR BAG 1
     float min_x = 0.69;
     float max_x = 0.74;
     float min_y = -0.134;
     float max_y = 0.47;
-    float min_z_plane = 0.46;
-    float max_z_plane = 1.122;
+    float min_z = 0.46;
+    float max_z = 1.122;
+    */
+    /* FOR BAG 2*/
+    float min_x = 0.564;
+    float max_x = 0.74;
+    float min_y = -0.134;
+    float max_y = 0.47;
+    float min_z = 0.46;
+    float max_z = 1.122;
+
+    /* FOR BAG 3 OR 4 
+    float min_x = 0.55;
+    float max_x = 0.63;
+    float min_y = -0.11;
+    float max_y = 0.5;
+    float min_z = 0.48;
+    float max_z = 1.122;
+    */
     int filtering_constant = 1;
     int counter = 0;
     for(int i = 0; i < cloud_size; i++)
     {
-        if ((point_cloud->points[i].z < max_z_plane) && (point_cloud->points[i].z > min_z_plane))
+        if ((point_cloud->points[i].z < max_z) && (point_cloud->points[i].z > min_z))
         {
             if ((point_cloud->points[i].y < max_y) && (point_cloud->points[i].y > min_y))
             {

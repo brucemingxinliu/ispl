@@ -28,17 +28,30 @@ Notes: WARNING: This function is hacky.
 void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
+	/* FOR BAG 1
 	float min_x = 0.69;
 	float max_x = 0.74;
 	float min_y = -0.134;
 	float max_y = 0.47;
-	float min_z_plane = 0.46;
-	float max_z_plane = 1.122;
-	int filtering_constant = 1;
+	float min_z = 0.46;
+	float max_z = 1.122;
+
+	*/
+
+	/* FOR BAG 3 OR 4 */
+	float min_x = 0.55;
+	float max_x = 0.63;
+	float min_y = -0.11;
+	float max_y = 0.5;
+	float min_z = 0.48;
+	float max_z = 1.122;
+
+   	int filtering_constant = 1;
 	int counter = 0;
+
 	for(int i = 0; i < cloud_size; i++)
 	{
-		if ((point_cloud->points[i].z < max_z_plane) && (point_cloud->points[i].z > min_z_plane))
+		if ((point_cloud->points[i].z < max_z) && (point_cloud->points[i].z > min_z))
 		{
 			if ((point_cloud->points[i].y < max_y) && (point_cloud->points[i].y > min_y))
 			{
@@ -153,7 +166,6 @@ bool getDataFromFile(std::string filename)
     float y;
     while(input_data >> value)
     {
-        //input_data >> g_point_cloud_data.points[i].x << ", " << g_point_cloud_data.points[i].y << ", " << g_point_cloud_data.points[i].z << std::endl;
         if(getting_x)
         {
         	x = value;
@@ -222,14 +234,19 @@ int main(int argc, char **argv)
 	MapFixture ourMap;
 
     // Instantiate the sensor location as being at the origin of our 'universe', this is a basic assumption of our map model
-    // CHANGE THIS WITH NEW INFORMATION TRENT
+   
+
+	   //if(nh_ptr->hasParam("/ispl/success"))
+	//{
+	//	ROS_INFO("...and these values may be trusted.");
+	//}
 	Point sensorOrigin(0,0,0);
 
     if(test_active == true)
     {
     	if(dataSource == "file")
     	{
-    		if(!getDataFromFile("/home/mordoc/point_cloud.txt"))
+    		if(!getDataFromFile("/home/mordoc/point_cloud1.txt"))
     		{
     			ROS_WARN("Couldn't get data from file!");
 				test_passed = false;
@@ -251,7 +268,26 @@ int main(int argc, char **argv)
 
     	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
     	// These are current assumptions that can/should/will/may change
-    	if(!ourMap.setCorners(Point(0.6935, 0.47187, 1.1), Point(0.724,-0.11783,1.1219), Point(0.70244,0.4681,0.48421), Point(0.73256,-0.133637,0.4661))) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
+
+    	// 1
+   		Point map1_1 = Point(0.6935, 0.47187, 1.1);
+   		Point map1_2 = Point(0.724,-0.11783,1.1219);
+   		Point map1_3 = Point(0.70244,0.4681,0.48421);
+   		Point map1_4 = Point(0.73256,-0.13364,0.4661);
+    	
+    	// 2
+   		Point map2_1 = Point(0.564, 0.47979, 0.49127);
+   		Point map2_2 = Point(0.623,0.5034,1.1075);
+   		Point map2_3 = Point(0.6586,-0.1022,1.129);
+   		Point map2_4 = Point(0.6045,-0.1152,0.4672);
+
+   		// 3 == 4
+   		Point map3_1 = Point(0.6026, -0.1106, 1.097);
+   		Point map3_2 = Point(0.624,-0.11783,1.1219);
+   		Point map3_3 = Point(0.582,0.4927,1.0735);
+   		Point map3_4 = Point(0.56,0.49,0.48);
+
+    	if(!ourMap.setCorners(map2_1, map2_2, map2_3, map2_4)) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}
