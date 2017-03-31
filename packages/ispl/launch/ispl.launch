@@ -8,15 +8,14 @@
 	<!-- Normal bag location: args="/home/mordoc/ispl_ws/src/ispl/bags/qbs.bag" -->
 
 	<node pkg="ispl" type="learn_params" name="learn_params" output="screen">
-
-
+		<param name="data_source" value="file" />
+		<param name="filename" value="/home/mordoc/point_cloud1.txt" />
+		<param name="sensor_origin_x" value="-0.175" />
+		<param name="sensor_origin_y" value="0.15" />
+		<param name="sensor_origin_z" value="0.6" />
 	</node>
 
-		<param name="/ispl/data_source" value="file" />
-		<param name="/ispl/filename" value="/home/mordoc/point_cloud1.txt" />
-		<param name="/ispl/sensor_origin_x" value="-0.175" />
-		<param name="/ispl/sensor_origin_y" value="0.15" />
-		<param name="/ispl/sensor_origin_z" value="0.6" />
+
 
 	<node pkg="ispl" type="test_ispl" name="test_ispl" output="screen"> 
 	</node>

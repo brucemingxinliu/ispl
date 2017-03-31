@@ -142,18 +142,18 @@ bool runPlaneValidation(MapFixture * ourMap)
 	return true;
 }
 
+// Mega-hacky function
 bool getDataFromFile(std::string filename)
 {
     std::ifstream input_data;
     input_data.open(filename.c_str());
-    ROS_INFO("GETTING OUTPUT DATA FROM...%s", filename.c_str());
     if(input_data.is_open())
     {
-        ROS_INFO("IS OPEN");
+        //ROS_INFO("IS OPEN");
     }
     else
     {
-        ROS_INFO("IS NOT OPEN");
+        ROS_WARN("%s IS NOT OPEN", filename.c_str());
     }
     
     float value;
@@ -235,9 +235,28 @@ int main(int argc, char **argv)
    
     std::string data_source;
     std::string filename;
-    float sensor_origin_x;
-    float sensor_origin_y;
-    float sensor_origin_z;
+
+	Point sensorOrigin;
+
+	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
+
+	// 1
+	Point map1_1 = Point(0.6935, 0.47187, 1.1);
+	Point map1_2 = Point(0.724,-0.11783,1.1219);
+	Point map1_3 = Point(0.70244,0.4681,0.48421);
+	Point map1_4 = Point(0.73256,-0.13364,0.4661);
+
+	// 2
+	Point map2_1 = Point(0.564, 0.47979, 0.49127);
+	Point map2_2 = Point(0.623,0.5034,1.1075);
+	Point map2_3 = Point(0.6586,-0.1022,1.129);
+	Point map2_4 = Point(0.6045,-0.1152,0.4672);
+
+	// 3 == 4
+	Point map3_1 = Point(0.6026, -0.1106, 1.097);
+	Point map3_2 = Point(0.624,-0.11783,1.1219);
+	Point map3_3 = Point(0.582,0.4927,1.0735);
+	Point map3_4 = Point(0.56,0.49,0.48);
 
     if(test_active == true)
     {
@@ -249,9 +268,9 @@ int main(int argc, char **argv)
 		{
 			ROS_WARN("Failed to get file name for file data source!");
 		}
-		if(   !nh_ptr->getParam("sensor_origin_x", sensor_origin_x) 
-		   || !nh_ptr->getParam("sensor_origin_y", sensor_origin_y)
-		   || !nh_ptr->getParam("sensor_origin_z", sensor_origin_z))
+		if(   !nh_ptr->getParam("sensor_origin_x", sensorOrigin.x) 
+		   || !nh_ptr->getParam("sensor_origin_y", sensorOrigin.y)
+		   || !nh_ptr->getParam("sensor_origin_z", sensorOrigin.z))
 		{
 			ROS_WARN("Failed to get sensor origin parameters!");
 		}
@@ -278,27 +297,6 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
-    	// These are current assumptions that can/should/will/may change
-
-    	// 1
-   		Point map1_1 = Point(0.6935, 0.47187, 1.1);
-   		Point map1_2 = Point(0.724,-0.11783,1.1219);
-   		Point map1_3 = Point(0.70244,0.4681,0.48421);
-   		Point map1_4 = Point(0.73256,-0.13364,0.4661);
-    	
-    	// 2
-   		Point map2_1 = Point(0.564, 0.47979, 0.49127);
-   		Point map2_2 = Point(0.623,0.5034,1.1075);
-   		Point map2_3 = Point(0.6586,-0.1022,1.129);
-   		Point map2_4 = Point(0.6045,-0.1152,0.4672);
-
-   		// 3 == 4
-   		Point map3_1 = Point(0.6026, -0.1106, 1.097);
-   		Point map3_2 = Point(0.624,-0.11783,1.1219);
-   		Point map3_3 = Point(0.582,0.4927,1.0735);
-   		Point map3_4 = Point(0.56,0.49,0.48);
-
     	if(!ourMap.setCorners(map2_1, map2_2, map2_3, map2_4)) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
@@ -310,7 +308,7 @@ int main(int argc, char **argv)
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
     	}
-		Point sensorOrigin(sensor_origin_x,sensor_origin_y,sensor_origin_z);
+
     	if(test_active2 == true)
     	{
 	    	// Run a test suite of various points that reports intersection locations
@@ -350,7 +348,6 @@ int main(int argc, char **argv)
     }
     else
     {
-    	ROS_INFO("LEARN PARAMS FUNCTION TESTING PASSED");
     	nh_ptr->setParam("/ispl/success", true);
     }
 
@@ -371,11 +368,6 @@ int main(int argc, char **argv)
 
 	// Create quick map PC
 	PointCloud map_pc;
-	Point a = Point(0.6935, 0.47187, 1.1);
-	Point b = Point(0.724,-0.11783,1.1219);
-	Point c = Point(0.70244,0.4681,0.48421);
-	Point d = Point(0.73256,-0.133637,0.4661);
-	Point e = Point(0,0,0);
 
    	while(ros::ok() && (count < time_to_wait))
    	{
@@ -383,11 +375,11 @@ int main(int argc, char **argv)
 		g_point_cloud_data.header.frame_id = "lidar_link";
 		pc_pub_ptr->publish(g_point_cloud_data);
 
-		map_pc.push_back(a);
-		map_pc.push_back(b);
-		map_pc.push_back(c);
-		map_pc.push_back(d);
-		map_pc.push_back(e);
+		map_pc.push_back(map2_1);
+		map_pc.push_back(map2_2);
+		map_pc.push_back(map2_3);
+		map_pc.push_back(map2_4);
+		map_pc.push_back(sensorOrigin);
 		
 		map_pc.header.frame_id = "lidar_link";
 		map_pub.publish(map_pc);
