@@ -1,6 +1,6 @@
 <launch> 
 	<!-- Start point cloud rosbag play to provide data; alternatively could use an actual data source (like a wobbling LIDAR or Kinect) -->
-	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/rosbags/4.bag">\
+	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/rosbags/1.bag">\
 		<!-- <remap from="/wobbler_3d_cloud" to="/ispl/point_cloud" /> -->
 		<remap from="/front_wobbler/point_cloud" to="/ispl/point_cloud" /> <!-- This is for playing from new single-wobbler bags -->
 	</node>

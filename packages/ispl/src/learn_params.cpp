@@ -18,7 +18,6 @@ PointCloud g_point_cloud_data;
 
 // Variables that help the main program wait until ROS topics for input data are received
 bool g_cloud_received;
-bool g_scan_received;
 
 /*
 Function: sort_cloud_slice()
@@ -26,10 +25,9 @@ Input: A rostopic Point Cloud pointer, specifically from a rostopic Point cloud 
 Output: Stores all points from input cloud into a global point cloud for points between two z values.
 Notes: WARNING: This function is hacky.
 */
-void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
+void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
-
 	float min_x = 0.69;
 	float max_x = 0.74;
 	float min_y = -0.134;
@@ -55,14 +53,7 @@ void sort_cloud_slice(const PointCloud::ConstPtr& point_cloud)
 			}
 		}
 	}
-}
-
-/*
-*/
-void cloudCB(const PointCloud::ConstPtr& cloud_holder)
-{
 	g_cloud_received = true;
-	sort_cloud_slice(cloud_holder);
 }
 
 // Waits for GLOBALLY DEFINED BOOLEANS to become true for a set number of seconds that are triggered by specific ros topics
@@ -137,6 +128,66 @@ bool runPlaneValidation(MapFixture * ourMap)
 
 	return true;
 }
+
+bool getDataFromFile(std::string filename)
+{
+    std::ifstream input_data;
+    input_data.open(filename.c_str());
+    ROS_INFO("GETTING OUTPUT DATA FROM...%s", filename.c_str());
+    if(input_data.is_open())
+    {
+        ROS_INFO("IS OPEN");
+    }
+    else
+    {
+        ROS_INFO("IS NOT OPEN");
+    }
+    
+    float value;
+
+    bool getting_x = true;
+    bool getting_y = false;
+    bool getting_z = false;
+
+    float x;
+    float y;
+    while(input_data >> value)
+    {
+        //input_data >> g_point_cloud_data.points[i].x << ", " << g_point_cloud_data.points[i].y << ", " << g_point_cloud_data.points[i].z << std::endl;
+        if(getting_x)
+        {
+        	x = value;
+        	getting_x = false;
+        	getting_y = true;
+        }
+        else if(getting_y)
+        {
+        	y = value;
+        	getting_y = false;
+        	getting_z = true;
+        }
+        else if(getting_z)
+        {
+        	//ROS_INFO("Adding Point(%f, %f, %f) to global cloud", x, y, value);
+			g_point_cloud_data.push_back(Point(x, y, value));
+			getting_z = false;
+        	getting_x = true;
+        }
+        else
+        {
+        	ROS_ERROR("ERROR IN CHOOSING WHAT TO GET!");
+        }
+    }
+    if(g_point_cloud_data.points.size() > 0)
+    {
+    	return true;
+    }
+    else
+    {
+    	return false;
+    }
+}
+
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
@@ -153,14 +204,15 @@ int main(int argc, char **argv)
     bool test_active2 = false;
     bool test_passed = true;
 
-    g_scan_received = false;
+    std::string dataSource = "file";
+
     g_cloud_received = false;
 
     ros::Subscriber pc_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
     
     // Publish point cloud for reference by other nodes, not currently really useful
 	ros::Publisher pc_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/meas_pc", 1);
-	ros::Publisher pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/map_pc", 1);
+	ros::Publisher map_pub = nh.advertise<sensor_msgs::PointCloud2> ("/ispl/map_pc", 1);
     pc_pub_ptr = &pc_pub;
 
     // Instantiate a sensor model
@@ -175,9 +227,25 @@ int main(int argc, char **argv)
 
     if(test_active == true)
     {
-    	if(waitForSubs() == false)
+    	if(dataSource == "file")
     	{
-    		ROS_WARN("Didn't receive any publications!");
+    		if(!getDataFromFile("/home/mordoc/point_cloud.txt"))
+    		{
+    			ROS_WARN("Couldn't get data from file!");
+				test_passed = false;
+    		}
+    	}
+    	else if (dataSource == "topic")
+    	{
+    		if(!waitForSubs())
+			{
+				ROS_WARN("Didn't receive any publications!");
+				test_passed = false;
+			}
+    	}
+    	else
+    	{
+    		ROS_WARN("GIVEN DATA SOURCE NAME IS NOT SET RIGHT");
     		test_passed = false;
     	}
 
@@ -274,7 +342,7 @@ int main(int argc, char **argv)
 		map_pc.push_back(e);
 		
 		map_pc.header.frame_id = "lidar_link";
-		pub.publish(map_pc);
+		map_pub.publish(map_pc);
 		
 		ros::spinOnce();
 		count_rate.sleep();

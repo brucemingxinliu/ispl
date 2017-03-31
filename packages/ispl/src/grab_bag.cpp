@@ -98,7 +98,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
         }
         for(int i = 0; i < g_point_cloud_data.points.size(); i++)
         {
-            output_data << g_point_cloud_data.points[i].x << ", " << g_point_cloud_data.points[i].y << ", " << g_point_cloud_data.points[i].z << std::endl;
+            output_data << g_point_cloud_data.points[i].x << " " << g_point_cloud_data.points[i].y << " " << g_point_cloud_data.points[i].z << std::endl;
         }
         cloud_number++;     
     }
