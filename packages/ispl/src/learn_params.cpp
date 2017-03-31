@@ -371,7 +371,7 @@ int main(int argc, char **argv)
 
    	while(ros::ok() && (count < time_to_wait))
    	{
-		// Send an output cloud, for other nodes to see
+		// Send an output cloud of what we measured, for other nodes to see
 		g_point_cloud_data.header.frame_id = "lidar_link";
 		pc_pub_ptr->publish(g_point_cloud_data);
 
