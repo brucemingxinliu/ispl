@@ -216,7 +216,7 @@ int main(int argc, char **argv)
     bool test_active2 = false;
     bool test_passed = true;
 
-    std::string dataSource = "file";
+
 
     g_cloud_received = false;
 
@@ -235,24 +235,46 @@ int main(int argc, char **argv)
 
     // Instantiate the sensor location as being at the origin of our 'universe', this is a basic assumption of our map model
    
+    std::string data_source;
+    std::string filename;
+    float sensor_origin_x;
+    float sensor_origin_y;
+    float sensor_origin_z;
 
-	   //if(nh_ptr->hasParam("/ispl/success"))
-	//{
-	//	ROS_INFO("...and these values may be trusted.");
-	//}
-	Point sensorOrigin(0,0,0);
+	if(nh_ptr->getParam("data_source", data_source))
+	{
+		ROS_INFO("GOOD DATA SRC");
+	}
+	if(nh_ptr->getParam("filename", filename))
+	{
+		ROS_INFO("GOOD FILENAME");
+	}
+	if(nh_ptr->getParam("sensor_origin_x", sensor_origin_x))
+	{
+		ROS_INFO("%f", sensor_origin_x);
+	}
+	if(nh_ptr->getParam("sensor_origin_y", sensor_origin_y))
+	{
+		ROS_INFO("%f", sensor_origin_y);
+	}
+	if(nh_ptr->getParam("sensor_origin_z",sensor_origin_z))
+	{
+		ROS_INFO("%f", sensor_origin_z);
+	}
+
+	Point sensorOrigin(sensor_origin_x,sensor_origin_y,sensor_origin_z);
 
     if(test_active == true)
     {
-    	if(dataSource == "file")
+    	if(data_source == "file")
     	{
-    		if(!getDataFromFile("/home/mordoc/point_cloud1.txt"))
+    		if(!getDataFromFile(filename.c_str()))
     		{
     			ROS_WARN("Couldn't get data from file!");
 				test_passed = false;
     		}
     	}
-    	else if (dataSource == "topic")
+    	else if (data_source == "topic")
     	{
     		if(!waitForSubs())
 			{
