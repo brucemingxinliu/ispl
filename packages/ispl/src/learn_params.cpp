@@ -232,8 +232,6 @@ int main(int argc, char **argv)
 
 	// Instantiate our map model
 	MapFixture ourMap;
-
-    // Instantiate the sensor location as being at the origin of our 'universe', this is a basic assumption of our map model
    
     std::string data_source;
     std::string filename;
@@ -241,31 +239,23 @@ int main(int argc, char **argv)
     float sensor_origin_y;
     float sensor_origin_z;
 
-	if(nh_ptr->getParam("data_source", data_source))
-	{
-		ROS_INFO("GOOD DATA SRC");
-	}
-	if(nh_ptr->getParam("filename", filename))
-	{
-		ROS_INFO("GOOD FILENAME");
-	}
-	if(nh_ptr->getParam("sensor_origin_x", sensor_origin_x))
-	{
-		ROS_INFO("%f", sensor_origin_x);
-	}
-	if(nh_ptr->getParam("sensor_origin_y", sensor_origin_y))
-	{
-		ROS_INFO("%f", sensor_origin_y);
-	}
-	if(nh_ptr->getParam("sensor_origin_z",sensor_origin_z))
-	{
-		ROS_INFO("%f", sensor_origin_z);
-	}
-
-	Point sensorOrigin(sensor_origin_x,sensor_origin_y,sensor_origin_z);
-
     if(test_active == true)
     {
+		if(!nh_ptr->getParam("data_source", data_source))
+		{
+			ROS_WARN("Failed to get data source type (file or topic)!");
+		}
+		if(!nh_ptr->getParam("filename", filename))
+		{
+			ROS_WARN("Failed to get file name for file data source!");
+		}
+		if(   !nh_ptr->getParam("sensor_origin_x", sensor_origin_x) 
+		   || !nh_ptr->getParam("sensor_origin_y", sensor_origin_y)
+		   || !nh_ptr->getParam("sensor_origin_z", sensor_origin_z))
+		{
+			ROS_WARN("Failed to get sensor origin parameters!");
+		}
+
     	if(data_source == "file")
     	{
     		if(!getDataFromFile(filename.c_str()))
@@ -320,7 +310,7 @@ int main(int argc, char **argv)
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
     	}
-
+		Point sensorOrigin(sensor_origin_x,sensor_origin_y,sensor_origin_z);
     	if(test_active2 == true)
     	{
 	    	// Run a test suite of various points that reports intersection locations
