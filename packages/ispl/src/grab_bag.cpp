@@ -10,6 +10,10 @@
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 
+// File IO for C++
+#include <iostream>
+#include <fstream>
+
 // Define shorthand names for PCL points and clouds
 typedef pcl::PointXYZ Point;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
@@ -17,6 +21,8 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloud;
 ros::NodeHandle * nh_ptr;
 bool g_cloud_received;
 PointCloud g_point_cloud_data;
+int cloud_number;
+
 // Waits for GLOBALLY DEFINED BOOLEAN to become true, triggered by specific ros topics
 bool waitForSubs()
 {
@@ -39,8 +45,17 @@ bool waitForSubs()
 
 void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
+    ROS_INFO("CLOUD CB CALLED");
     int cloud_size = point_cloud->points.size();
-
+    if(cloud_size == 0)
+    {
+        ROS_WARN("CLOUD CB found a cloud of size 0!");
+        return;
+    }
+    else
+    {
+        ROS_INFO("CLOUD CB found a cloud of size %d!", cloud_size);
+    }
     float min_x = 0.69;
     float max_x = 0.74;
     float min_y = -0.134;
@@ -59,13 +74,33 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
                 {
                     if(counter % filtering_constant == 0)
                     {
-                        g_point_cloud_data.push_back(point_cloud->points[i]);       
+                        g_point_cloud_data.push_back(point_cloud->points[i]);    
+                        ROS_INFO("Push backed");
                     }
                     counter++;
                 }
             }
         }
     }
+
+    std::ofstream output_data;
+    std::string name = "/home/mordoc/point_cloud.txt";
+    output_data.open(name.c_str());
+    ROS_INFO("OUTPUT DATA...%s", name.c_str());
+    if(output_data.is_open())
+    {
+        ROS_INFO("IS OPEN: %lu", g_point_cloud_data.points.size());
+    }
+    else
+    {
+        ROS_INFO("IS NOT OPEN");
+    }
+    for(int i = 0; i < g_point_cloud_data.points.size(); i++)
+    {
+        ROS_INFO("%f", g_point_cloud_data.points[i].x);
+        //output_data << g_point_cloud_data.points[i].x; // << ", " << g_point_cloud_data.points[i].y << ", " << g_point_cloud_data.points[i].z << std::endl;
+    }
+    cloud_number++;
     g_cloud_received = true;
 }
  
@@ -75,6 +110,7 @@ int main(int argc, char **argv)
 
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
+    cloud_number = 0;
 
     g_cloud_received = false;
 

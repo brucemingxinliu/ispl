@@ -194,7 +194,7 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 								Point * origin)
 {
 	// for debug?
-	param_file.open("/home/mordoc/param_convergence.txt");
+	param_file.open("/home/mordoc/ispl_model_file.txt");
 	//param_file << "z_hit" << " " << "z_short" << " " << "z_max" << " " << "z_rand" << " " << "sig_hit" << " " << "lam_short" << std::endl;
 	
 	int cloud_size = point_cloud->points.size();
