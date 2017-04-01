@@ -70,22 +70,22 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
         float min_z = 0.46;
         float max_z = 1.122;
         */
-        /* FOR BAG 2*/
+        /* FOR BAG 2
         float min_x = 0.564;
         float max_x = 0.74;
         float min_y = -0.134;
         float max_y = 0.47;
         float min_z = 0.46;
         float max_z = 1.122;
-
-        /* FOR BAG 3 OR 4 
-        float min_x = 0.55;
+*/  
+        /* FOR BAG 3 OR 4 */
+        float min_x = 0; // CHANGE TO 0.55
         float max_x = 0.63;
         float min_y = -0.11;
         float max_y = 0.5;
         float min_z = 0.48;
         float max_z = 1.122;
-        */
+        
         int filtering_constant = 1;
         int counter = 0;
         for(int i = 0; i < cloud_size; i++)
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
     cloud_number = 0;
-    g_cloud_to_get = 6;
+    g_cloud_to_get = 11;
     g_cloud_counter = 0;
     g_cloud_received = false;
 

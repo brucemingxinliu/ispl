@@ -229,17 +229,18 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		ROS_WARN("COULD NOT FIND furthest_z/longest_range, furthest_z is uninitialized!");
 	}
 
+	// Governs the "width" of the z_max bin (numerical impracticality-driven)
 	// This seems reasonable to me. Current testing usually shows that it's identically 0, so this may be over precautious
 	z_max_tol = 0.001;
 
 	// Minimum percent that the specific parameter needs to be before the algorithm will stop trying to be more accurate
 	// This represents, for example if = 0.05, a less 5% change between iterations before the learning algorithm will stop itself
-	z_hit_conv_perc = 0.05;
-	z_short_conv_perc = 0.05;
-	z_max_conv_perc = 0.05;
-	z_rand_conv_perc = 0.05;
-	sig_hit_conv_perc = 0.05;
-	lam_short_conv_perc = 0.05;
+	z_hit_conv_perc = 0.01;
+	z_short_conv_perc = 0.01;
+	z_max_conv_perc = 0.01;
+	z_rand_conv_perc = 0.01;
+	sig_hit_conv_perc = 0.01;
+	lam_short_conv_perc = 0.01;
 
 	// Do magic!
 	return learnParameters(point_cloud, origin, map_plane);
@@ -570,7 +571,7 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 			p_hit = eta2*nd;
 		}
 
-		if(p_hit < 0 || p_hit > 1) //!std::isfinite(p_hit))
+		if(1) //p_hit < 0 || p_hit > 1) //!std::isfinite(p_hit))
 		{
 			ROS_WARN("WARNING: Potential improper p_hit value!");
 			//ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);

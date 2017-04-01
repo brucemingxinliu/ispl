@@ -28,7 +28,7 @@ Notes: WARNING: This function is hacky.
 void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
-	/* FOR BAG 1
+	/* FOR BAG 1 */
 	float min_x = 0.69;
 	float max_x = 0.74;
 	float min_y = -0.134;
@@ -36,15 +36,23 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 	float min_z = 0.46;
 	float max_z = 1.122;
 
-	*/
+    /* FOR BAG 2
+    float min_x = 0.564;
+    float max_x = 0.74;
+    float min_y = -0.134;
+    float max_y = 0.47;
+    float min_z = 0.46;
+    float max_z = 1.122;
+	*/  
 
-	/* FOR BAG 3 OR 4 */
+	/* FOR BAG 3 OR 4 
 	float min_x = 0.55;
 	float max_x = 0.63;
 	float min_y = -0.11;
 	float max_y = 0.5;
 	float min_z = 0.48;
 	float max_z = 1.122;
+	*/
 
    	int filtering_constant = 1;
 	int counter = 0;
@@ -216,8 +224,6 @@ int main(int argc, char **argv)
     bool test_active2 = false;
     bool test_passed = true;
 
-
-
     g_cloud_received = false;
 
     ros::Subscriber pc_sub = nh.subscribe("/ispl/point_cloud", 1, cloudCB);
@@ -297,7 +303,7 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	if(!ourMap.setCorners(map2_1, map2_2, map2_3, map2_4)) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
+    	if(!ourMap.setCorners(map1_1, map1_2, map1_3, map1_4)) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}
@@ -375,10 +381,10 @@ int main(int argc, char **argv)
 		g_point_cloud_data.header.frame_id = "lidar_link";
 		pc_pub_ptr->publish(g_point_cloud_data);
 
-		map_pc.push_back(map2_1);
-		map_pc.push_back(map2_2);
-		map_pc.push_back(map2_3);
-		map_pc.push_back(map2_4);
+		map_pc.push_back(map1_1);
+		map_pc.push_back(map1_2);
+		map_pc.push_back(map1_3);
+		map_pc.push_back(map1_4);
 		map_pc.push_back(sensorOrigin);
 		
 		map_pc.header.frame_id = "lidar_link";
