@@ -67,7 +67,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 				{
 					if(counter % filtering_constant == 0)
 					{
-						g_point_cloud_data.push_back(point_cloud->points[i]);		
+						//g_point_cloud_data.push_back(point_cloud->points[i]);		  CHANGE THIS TRENT
 					}
 					counter++;
 				}
@@ -163,9 +163,25 @@ bool getDataFromFile(std::string filename)
     {
         ROS_WARN("%s IS NOT OPEN", filename.c_str());
     }
-    
-    float value;
 
+    float value;
+    float value2;
+    int j = 1;
+    if(1)
+    {
+    	while(input_data >> value)
+    	{
+    	   	value2 = j*0.891111067117/(48*sqrt(3));
+    		for(int i = 0; i < value; i++)
+    		{
+    			g_point_cloud_data.push_back(Point(value2+0.175, value2-0.15, value2-0.6));
+    		}
+    		ROS_INFO("Added %f of %f", value, value2*sqrt(3));
+    		j++;
+    	}
+    }
+    else
+    {
     bool getting_x = true;
     bool getting_y = false;
     bool getting_z = false;
@@ -197,6 +213,7 @@ bool getDataFromFile(std::string filename)
         {
         	ROS_ERROR("ERROR IN CHOOSING WHAT TO GET!");
         }
+    }
     }
     if(g_point_cloud_data.points.size() > 0)
     {
@@ -371,7 +388,6 @@ int main(int argc, char **argv)
    	int time_to_wait = 10; // ms
 	ros::Rate count_rate(1); // ms
 	int count = 0;
-
 	// Create quick map PC
 	PointCloud map_pc;
 

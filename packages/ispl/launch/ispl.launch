@@ -2,21 +2,20 @@
 	<!-- Start point cloud rosbag play to provide data; alternatively could use an actual data source (like a wobbling LIDAR or Kinect) -->
 	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/rosbags/1.bag">\
 		<!-- <remap from="/wobbler_3d_cloud" to="/ispl/point_cloud" /> -->
-		<remap from="/front_wobbler/point_cloud" to="/ispl/point_cloud" /> <!-- This is for playing from new single-wobbler bags -->
+		<remap from="/front_wobbler/point_cloud" to="/ispl/point_cloud" />
 	</node>
-
-	<!-- Normal bag location: args="/home/mordoc/ispl_ws/src/ispl/bags/qbs.bag" -->
 
 	<node pkg="ispl" type="learn_params" name="learn_params" output="screen">
 		<param name="data_source" value="file" />
-		<param name="filename" value="/home/mordoc/point_cloud1.txt" />
+		<param name="filename" value="/home/mordoc/freq_data.txt" />
+
+		<!--  <param name="sensor_origin_x" value="0" />
+		<param name="sensor_origin_y" value="0" />
+		<param name="sensor_origin_z" value="0" /> -->
+
 		<param name="sensor_origin_x" value="-0.175" />
 		<param name="sensor_origin_y" value="0.15" />
-		<param name="sensor_origin_z" value="0.6" />
-
-		<!-- <param name="sensor_origin_x" value="-0.175" />
-		<param name="sensor_origin_y" value="0.15" />
-		<param name="sensor_origin_z" value="0.6" /> -->
+		<param name="sensor_origin_z" value="0.6" /> 
 	</node>
 
 	<node pkg="ispl" type="test_ispl" name="test_ispl" output="screen"> 

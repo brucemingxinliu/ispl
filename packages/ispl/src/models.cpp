@@ -231,16 +231,16 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 
 	// Governs the "width" of the z_max bin (numerical impracticality-driven)
 	// This seems reasonable to me. Current testing usually shows that it's identically 0, so this may be over precautious
-	z_max_tol = 0.001;
+	z_max_tol = 0.01;
 
 	// Minimum percent that the specific parameter needs to be before the algorithm will stop trying to be more accurate
 	// This represents, for example if = 0.05, a less 5% change between iterations before the learning algorithm will stop itself
-	z_hit_conv_perc = 0.01;
-	z_short_conv_perc = 0.01;
-	z_max_conv_perc = 0.01;
-	z_rand_conv_perc = 0.01;
-	sig_hit_conv_perc = 0.01;
-	lam_short_conv_perc = 0.01;
+	z_hit_conv_perc = 0.0001;
+	z_short_conv_perc = 0.0001;
+	z_max_conv_perc = 0.0001;
+	z_rand_conv_perc = 0.0001;
+	sig_hit_conv_perc = 0.0001;
+	lam_short_conv_perc = 0.0001;
 
 	// Do magic!
 	return learnParameters(point_cloud, origin, map_plane);
@@ -260,8 +260,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	float p_short_val;
 	float p_max_val;
 	float p_rand_val;
-
-	float p_hit_offset_val;
 	
 	// Overall normalization value
 	float eta;
@@ -282,9 +280,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		float e_short_sum = 0;
 		float e_max_sum = 0;
 		float e_rand_sum = 0;
-		float e_hit_offset_sum = 0;
 		float e_short_ext_sum = 0;
-
 		float altered_e_hit_sum = 0;
 
 		for (int k = 0; k < Z->size(); k++)
@@ -304,8 +300,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			{
 				param_file << relative_distance << std::endl;
 			}
-
-			p_hit_offset_val = p_hit_offset(data_cloud[k], sensor_origin, m);
 
 			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
 
@@ -327,9 +321,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			e_short.push_back(e_short_val);
 			e_max.push_back(e_max_val);
 			e_rand.push_back(e_rand_val);
-
-			// For sig_hit re-calculation later
-			e_hit_offset.push_back(eta * p_hit_offset_val);
 		}
 		first_time = false;
 		
@@ -352,12 +343,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		for(int j = 0; j < e_rand.size(); j++)
 		{
 			e_rand_sum += e_rand[j];
-		}
-
-		for(int j = 0; j < e_hit_offset.size(); j++)
-		{
-			e_hit_offset_sum += pow(e_hit_offset[j], 2);
-			//ROS_INFO("e_hit_offset_sum = %f \n e_hit_offset[j] = %f", e_hit_offset_sum, e_hit_offset[j]);
 		}
 
 		for(int j = 0; j < e_short.size(); j++)
@@ -470,66 +455,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 }
 
 /*
-Function: SensorModel::p_hit_offset
-Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
-Output: Returns the probability that the measurement specified actually hit the location specified by the sensor/map geometry, given a normal noise distribution
-Notes: Companion function to "p_hit". Calls for sig_hit and furthest_z, within the SensorModel instantiation object
-*/
-float SensorModel::p_hit_offset(Point meas_point, Point sensor_origin, MapFixture * m)
-{
-	// Ray trace from the origin to the measurement point to find where it intersects the map
-	// This point is the location of where the meas_point 'should' have been
-	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
-
-	// Compute the magnitude distance from the sensor to the measurment point
-	float z_k = vectorLength(sensor_origin, meas_point);
-
-	// Compute the magnitude distance from the sensor to the intersection point
-	float z_k_star = vectorLength(sensor_origin, intersection_point);
-
-	//float temp = z_k;
-	z_k = z_k - z_k_star;
-	//ROS_INFO("Reassigning z_k from %f to %f for p hit offset thing.", temp, z_k);
-
-	if(!std::isfinite(z_k_star))
-	{
-		ROS_WARN("P_HIT_OFFSET reports that the measurement point doesn't intersect the map plane, returning 0!");
-		return 0;
-	}
-	else
-	{
-		// Compute the total area under the normal distribution curve
-		float in2 = normalDistribution(z_k_star, z_k_star, sig_hit*sig_hit);
-		float eta2 = 1/in2;
-		float nd = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
-		float p_hit_offset;
-		if(!std::isfinite(eta2))
-		{
-			p_hit_offset = 0; // Otherwise p_hit_offset ends up being not a number; don't worry, all this means is that p_hit_offset is nothing
-		}
-		else
-		{
-			p_hit_offset = eta2*nd;
-		}
-
-		if(p_hit_offset < 0 || p_hit_offset > 1) //!std::isfinite(p_hit_offset))
-		{
-			ROS_WARN("WARNING: Potential improper p_hit_offset value!");
-			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
-			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
-			ROS_INFO("Distance to measured point z_k = %f", z_k);
-			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
-			ROS_INFO("Sig_hit = %f  furthest_z = %f", sig_hit, furthest_z);
-			ROS_INFO("Integrated normalizer = %f", in2);
-			ROS_INFO("eta2 is %f", eta2);
-			ROS_INFO("nd is %f", nd);
-			ROS_INFO("p_hit_offset is %f \n", p_hit_offset);
-		}
-		return p_hit_offset;
-	}
-}
-
-/*
 Function: SensorModel::p_hit
 Input: A single measurement (point), as well as the location of the sensor and the map of the test fixture
 Output: Returns the probability that the measurement specified actually hit the location specified by the sensor/map geometry, given a normal noise distribution
@@ -571,7 +496,7 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 			p_hit = eta2*nd;
 		}
 
-		if(1) //p_hit < 0 || p_hit > 1) //!std::isfinite(p_hit))
+		if(p_hit < 0 || p_hit > 1)
 		{
 			ROS_WARN("WARNING: Potential improper p_hit value!");
 			//ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
@@ -631,6 +556,9 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 
 		if(p_short < 0 || p_short > 1)
 		{
+			if(0)
+			{
+
 			ROS_WARN("WARNING: Potential improper p_short value!");
 			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
 			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
@@ -639,7 +567,9 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 			ROS_INFO("Lam_short = %f", lam_short);
 			ROS_INFO("eta is %f", eta);
 			ROS_INFO("P_short is %f \n", p_short);
-			return 1; // CHANGE THIS TRENT THIS ISNT RIGHT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+			}
+			return 1;
 		}
 		return p_short;
 	}
@@ -677,6 +607,7 @@ float SensorModel::p_max(Point meas_point, Point sensor_origin, MapFixture * m)
 			p_max = 0;
 		}
 	}
+	//ROS_INFO("z_k = %f, z_max_tol = %f, furthest_z = %f", z_k, z_max_tol, furthest_z);
 	return p_max;
 }
 
