@@ -193,11 +193,12 @@ bool getDataFromFile(std::string filename)
     float value;
     float value2;
     int j = 1;
-    if(0)
+    if(1)
     {
     	while(input_data >> value)
     	{
-    	   	value2 = j*0.891111067117/(48*sqrt(3));
+    	   	//value2 = j*0.891111067117/(48*sqrt(3));
+    		value2 = floor(j)/sqrt(3);;;;; // HERE
     		for(int i = 0; i < value; i++)
     		{
     			g_point_cloud_data.push_back(Point(value2+0.2795, value2+0.767, value2+0.115));
