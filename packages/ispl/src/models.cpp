@@ -240,13 +240,14 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 	z_max_tol = 0.01;
 
 	// Minimum percent that the specific parameter needs to be before the algorithm will stop trying to be more accurate
-	// This represents, for example if = 0.05, a less 5% change between iterations before the learning algorithm will stop itself
-	z_hit_conv_perc = 0.01;
-	z_short_conv_perc = 0.01;
-	z_max_conv_perc = 0.01;
-	z_rand_conv_perc = 0.01;
-	sig_hit_conv_perc = 0.01;
-	lam_short_conv_perc = 0.01;
+	// This represents, for example if = 0.05, a less 5% change between iterations before the learning algorithm will stop itself,
+	//     or the difference between iterations is less than that absolute value (this dual meaning of the tolerance is purely for convenience)
+	z_hit_conv_perc = 0.001;
+	z_short_conv_perc = 0.001;
+	z_max_conv_perc = 0.001;
+	z_rand_conv_perc = 0.001;
+	sig_hit_conv_perc = 0.001;
+	lam_short_conv_perc = 0.001;
 
 	// Do magic!
 	return learnParameters(point_cloud, origin, map_plane);
@@ -324,7 +325,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			float z_k_star = vectorLength(sensor_origin, intersection_point);
 
 			altered_e_hit_sum += e_hit_val*pow(z_k - z_k_star, 2); 
-
+			//ROS_INFO("aehs = %f, ehv = %f, altdist = %f, altdist^2 = %f", altered_e_hit_sum, e_hit_val, z_k - z_k_star, pow(z_k - z_k_star, 2));
 			// NOTE: As long as this loops index stays in 0 to size(z) order, then index of data_cloud and these four vectors will match up
 			e_hit.push_back(e_hit_val);
 			e_short.push_back(e_short_val);
@@ -373,7 +374,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		z_max = e_max_sum/mag_Z;
 		z_rand = e_rand_sum/mag_Z;
 
-		//ROS_INFO("ehs=%f ess=%f ems=%f ers=%f sig_hit=%f lam_short=%f", e_hit_sum, e_short_sum, e_max_sum, e_rand_sum, sig_hit, lam_short);
+		// ROS_INFO("ehs=%f ess=%f ems=%f ers=%f sig_hit=%f lam_short=%f", e_hit_sum, e_short_sum, e_max_sum, e_rand_sum, sig_hit, lam_short);
 
 		if(!normalized(z_hit, z_short, z_max, z_rand))
 		{
@@ -510,7 +511,7 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 			p_hit = eta*nd;
 		}
 
-		if(0)// p_hit < 0 || p_hit > 1)
+		if(0)
 		{
 			ROS_WARN("WARNING: Potential improper p_hit value!");
 			//ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
@@ -568,11 +569,8 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 			p_short = eta * lam_short * exp(-lam_short*z_k);
 		}
 
-		if(p_short < 0 || p_short > 1)
+		if(0)
 		{
-			if(0)
-			{
-
 			ROS_WARN("WARNING: Potential improper p_short value!");
 			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
 			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
@@ -581,9 +579,6 @@ float SensorModel::p_short(Point meas_point, Point sensor_origin, MapFixture * m
 			ROS_INFO("Lam_short = %f", lam_short);
 			ROS_INFO("eta is %f", eta);
 			ROS_INFO("P_short is %f \n", p_short);
-
-			}
-			return 1;
 		}
 		return p_short;
 	}

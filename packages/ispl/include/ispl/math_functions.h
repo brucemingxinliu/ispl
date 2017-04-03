@@ -53,7 +53,7 @@ bool checkConvergence(float new_val, float old_val, float tolerance)
 		ROS_WARN("Checked convergence on a non-finite value (old or new)! Failed!");
 		return false;
 	}
-	if(difference < 0.001)
+	if(difference < tolerance)
 	{
 		return true;
 	}

@@ -255,10 +255,6 @@ bool getDataFromFile(std::string filename)
 ///////////////////////////        MAIN       ////////////////////////////
 int main(int argc, char **argv)
 {
-	// THINGS TO DO:
-	// Output data as histogram for manual analysis?
-	// Take in /home/mordoc/ispl_data as a histogram and process and then run alg on it
-	// Input/output data from file so we can pick and choose
     ros::init(argc,argv,"learn_intrinsic_parameters");
 
     ros::NodeHandle nh("~");
@@ -291,7 +287,7 @@ int main(int argc, char **argv)
 	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
 
 	// 1
-	Point map1_1 = Point(-0.33, -1, 0);           /////////// CHANGE ME
+	Point map1_1 = Point(-0.33, -1, 0);           /////////// CHANGE ME to -1????
 	Point map1_2 = Point(-0.33, -1, 0.43);
 	Point map1_3 = Point( 0.33, -1, 0.43);
 	Point map1_4 = Point( 0.33, -1, 0);
@@ -371,7 +367,7 @@ int main(int argc, char **argv)
     	}
 
     	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
-    	if(!ourSensor.setInitialParams(0.1, 0.1, 0.4, 0.4, 2, 1))
+    	if(!ourSensor.setInitialParams(1, 1, 1, 1, 0.5, 1.1))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
@@ -430,8 +426,8 @@ int main(int argc, char **argv)
     // Tell test node that we are done, so it can start doing things
     nh_ptr->setParam("/learning_done", true);
    
-   	int time_to_wait = 10; // ms
-	ros::Rate count_rate(1); // ms
+   	int time_to_wait = 1000; // ms
+	ros::Rate count_rate(10); // ms
 	int count = 0;
 	// Create quick map PC
 	PointCloud map_pc;
@@ -439,7 +435,7 @@ int main(int argc, char **argv)
    	while(ros::ok() && (count < time_to_wait))
    	{
 		// Send an output cloud of what we measured, for other nodes to see
-		g_point_cloud_data.header.frame_id = "lidar_link";
+		g_point_cloud_data.header.frame_id = "pc";
 		pc_pub_ptr->publish(g_point_cloud_data);
 
 		map_pc.push_back(map1_1);
