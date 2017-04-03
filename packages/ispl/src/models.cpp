@@ -293,10 +293,10 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 
 		for (int k = 0; k < Z->size(); k++)
 		{
-			p_hit_val = z_hit*p_hit(data_cloud[k], sensor_origin, m);
-			p_short_val = z_short*p_short(data_cloud[k], sensor_origin, m);
-			p_max_val = z_max*p_max(data_cloud[k], sensor_origin, m);
-			p_rand_val = z_rand*p_rand(data_cloud[k], sensor_origin, m);
+			p_hit_val = p_hit(data_cloud[k], sensor_origin, m);
+			p_short_val = p_short(data_cloud[k], sensor_origin, m);
+			p_max_val = p_max(data_cloud[k], sensor_origin, m);
+			p_rand_val = p_rand(data_cloud[k], sensor_origin, m);
 
 			Point intersection_point = m->rayTrace(sensor_origin, data_cloud[k]);
 			float relative_distance = computeDistance(sensor_origin, data_cloud[k], intersection_point);

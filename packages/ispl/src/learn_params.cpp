@@ -181,11 +181,7 @@ bool getDataFromFile(std::string filename)
 {
     std::ifstream input_data;
     input_data.open(filename.c_str());
-    if(input_data.is_open())
-    {
-        //ROS_INFO("IS OPEN");
-    }
-    else
+    if(!input_data.is_open())
     {
         ROS_WARN("%s IS NOT OPEN", filename.c_str());
     }
@@ -193,21 +189,20 @@ bool getDataFromFile(std::string filename)
     float value;
     float value2;
     int j = 1;
-    if(1)
+    if(1) // THIS IS A HACK DONT EVEN BOTHER TRYING
     {
     	while(input_data >> value)
     	{
-    	   	//value2 = j*0.891111067117/(48*sqrt(3));
-    		value2 =  1.732051*j/(88*sqrt(3)); //1.328483*j...
+    		value2 =  1.732051*j/(88*sqrt(3));
     		for(int i = 0; i < value; i++)
     		{
-    			g_point_cloud_data.push_back(Point(value2, value2, value2)); //value2+0.2795, value2+0.767, value2+0.115));
+    			g_point_cloud_data.push_back(Point(value2, value2, value2));
     		}
-    		ROS_INFO("Added %f of %f", value, value2*sqrt(3));
+    		// ROS_INFO("Added %f of %f", value, value2*sqrt(3));
     		j++;
     	}
     }
-    else
+    else // This is real...a real state machine
     {
     bool getting_x = true;
     bool getting_y = false;
@@ -291,6 +286,7 @@ int main(int argc, char **argv)
 	Point map1_2 = Point(-0.33, -1, 0.43);
 	Point map1_3 = Point( 0.33, -1, 0.43);
 	Point map1_4 = Point( 0.33, -1, 0);
+
 	/* FROM MY ESTIMATIONS
 	Point map1_1 = Point(0.6935, 0.47187, 1.1);
 	Point map1_2 = Point(0.724,-0.11783,1.1219);
@@ -435,7 +431,7 @@ int main(int argc, char **argv)
    	while(ros::ok() && (count < time_to_wait))
    	{
 		// Send an output cloud of what we measured, for other nodes to see
-		g_point_cloud_data.header.frame_id = "pc";
+		g_point_cloud_data.header.frame_id = "pc"; // Or lidar link?
 		pc_pub_ptr->publish(g_point_cloud_data);
 
 		map_pc.push_back(map1_1);
