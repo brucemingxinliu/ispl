@@ -198,10 +198,10 @@ bool getDataFromFile(std::string filename)
     	while(input_data >> value)
     	{
     	   	//value2 = j*0.891111067117/(48*sqrt(3));
-    		value2 = floor(j)/sqrt(3);;;;; // HERE
+    		value2 =  1.732051*j/(88*sqrt(3)); //1.328483*j...
     		for(int i = 0; i < value; i++)
     		{
-    			g_point_cloud_data.push_back(Point(value2+0.2795, value2+0.767, value2+0.115));
+    			g_point_cloud_data.push_back(Point(value2, value2, value2)); //value2+0.2795, value2+0.767, value2+0.115));
     		}
     		ROS_INFO("Added %f of %f", value, value2*sqrt(3));
     		j++;
@@ -291,10 +291,10 @@ int main(int argc, char **argv)
 	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
 
 	// 1
-	Point map1_1 = Point(-0.33, 0, 0);
-	Point map1_2 = Point(-0.33, 0, 0.43);
-	Point map1_3 = Point( 0.33, 0, 0.43);
-	Point map1_4 = Point( 0.33, 0, 0);
+	Point map1_1 = Point(-0.33, -1, 0);           /////////// CHANGE ME
+	Point map1_2 = Point(-0.33, -1, 0.43);
+	Point map1_3 = Point( 0.33, -1, 0.43);
+	Point map1_4 = Point( 0.33, -1, 0);
 	/* FROM MY ESTIMATIONS
 	Point map1_1 = Point(0.6935, 0.47187, 1.1);
 	Point map1_2 = Point(0.724,-0.11783,1.1219);
@@ -371,7 +371,7 @@ int main(int argc, char **argv)
     	}
 
     	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
-    	if(!ourSensor.setInitialParams(0.5, 0.1, 0.2, 0.2, 1, 0.9))
+    	if(!ourSensor.setInitialParams(0.1, 0.1, 0.4, 0.4, 2, 1))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;

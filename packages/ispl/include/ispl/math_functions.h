@@ -1,6 +1,6 @@
 // Internal Sensor Parameter Learning node
 // Created Mar 9 2017 by Trent Ziemer
-// Last updated Mar 21 2017 by Trent Ziemer
+// Last updated Apr 3 2017 by Trent Ziemer
 
 // Used for numerical integration of Gaussian functions
 #define INTEGRAL_STEPS 1000
@@ -21,6 +21,7 @@ float integral(float(*f)(float x1, float x2, float x3), float a, float b, int n,
     for (int i = 0; i < n; i ++) {
         area += f(a + (i + 0.5) * step, mean, variance) * step; // sum up each small rectangle
     }
+    //ROS_INFO("Area under normal dist curve from %f to %f, with mean %f and var %f is %f", a, b, mean, variance, area);
     return area;
 }
 
@@ -51,6 +52,10 @@ bool checkConvergence(float new_val, float old_val, float tolerance)
 	{
 		ROS_WARN("Checked convergence on a non-finite value (old or new)! Failed!");
 		return false;
+	}
+	if(difference < 0.001)
+	{
+		return true;
 	}
 	return (fabs(difference/new_val) < tolerance);
 }
