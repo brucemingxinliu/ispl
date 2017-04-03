@@ -28,14 +28,23 @@ Notes: WARNING: This function is hacky.
 void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
-	/* FOR BAG 1 */
+	/* FOR BAG 1 
 	float min_x = 0.69;
 	float max_x = 0.74;
 	float min_y = -0.134;
 	float max_y = 0.47;
 	float min_z = 0.46;
 	float max_z = 1.122;
+	*/
 
+	/* FOR BAG 1 with Bruce Coords */
+	float min_x = -0.4;
+	float max_x = 0.4;
+	float min_y = -0.1;
+	float max_y = 0.1;
+	float min_z = -0.05;
+	float max_z = 0.48; 
+	
     /* FOR BAG 2
     float min_x = 0.564;
     float max_x = 0.74;
@@ -53,6 +62,23 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 	float min_z = 0.48;
 	float max_z = 1.122;
 	*/
+
+	/* FOR BAG 5 with Bruce Coords 
+	float min_x = -27.8/100;
+	float max_x = 27.8/100;
+	float min_y = -18.07/100;
+	float max_y = 18.07/100;
+	float min_z = -0.01;
+	float max_z = 44/100; */ 
+
+	/* FOR BAG 6 with Bruce Coords 
+	float min_x = -0.0799;
+	float max_x = 0.0799;
+	float min_y = -0.321;
+	float max_y = 0.321;
+	float min_z = -0.01;
+	float max_z = 0.44;
+*/
 
    	int filtering_constant = 1;
 	int counter = 0;
@@ -167,14 +193,14 @@ bool getDataFromFile(std::string filename)
     float value;
     float value2;
     int j = 1;
-    if(1)
+    if(0)
     {
     	while(input_data >> value)
     	{
     	   	value2 = j*0.891111067117/(48*sqrt(3));
     		for(int i = 0; i < value; i++)
     		{
-    			g_point_cloud_data.push_back(Point(value2+0.175, value2-0.15, value2-0.6));
+    			g_point_cloud_data.push_back(Point(value2+0.2795, value2+0.767, value2+0.115));
     		}
     		ROS_INFO("Added %f of %f", value, value2*sqrt(3));
     		j++;
@@ -264,22 +290,40 @@ int main(int argc, char **argv)
 	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
 
 	// 1
+	Point map1_1 = Point(-0.33, 0, 0);
+	Point map1_2 = Point(-0.33, 0, 0.43);
+	Point map1_3 = Point( 0.33, 0, 0.43);
+	Point map1_4 = Point( 0.33, 0, 0);
+	/* FROM MY ESTIMATIONS
 	Point map1_1 = Point(0.6935, 0.47187, 1.1);
 	Point map1_2 = Point(0.724,-0.11783,1.1219);
 	Point map1_3 = Point(0.70244,0.4681,0.48421);
 	Point map1_4 = Point(0.73256,-0.13364,0.4661);
+	*/
 
-	// 2
+	// 2 FROM MY ESTIMATIONS
 	Point map2_1 = Point(0.564, 0.47979, 0.49127);
 	Point map2_2 = Point(0.623,0.5034,1.1075);
 	Point map2_3 = Point(0.6586,-0.1022,1.129);
 	Point map2_4 = Point(0.6045,-0.1152,0.4672);
 
-	// 3 == 4
+	// 3 == 4 FROM MY ESTIMATIONS
 	Point map3_1 = Point(0.6026, -0.1106, 1.097);
 	Point map3_2 = Point(0.624,-0.11783,1.1219);
 	Point map3_3 = Point(0.582,0.4927,1.0735);
 	Point map3_4 = Point(0.56,0.49,0.48);
+
+	// 5
+	Point map5_1 = Point(-0.2769, -0.18051, 0);
+	Point map5_2 = Point(-0.2769, -0.18051, 0.43);
+	Point map5_3 = Point(0.2769, 0.18051, 0.43);
+	Point map5_4 = Point(0.2769, 0.18051, 0);
+
+	// 6
+	Point map6_1 = Point(-0.07986, -0.3201, 0);
+	Point map6_2 = Point(-0.07986, -0.3201, 0.43);
+	Point map6_3 = Point(0.07986,  0.3201, 0.43);
+	Point map6_4 = Point(0.07986,  0.3201, 0);
 
     if(test_active == true)
     {
@@ -320,7 +364,7 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	if(!ourMap.setCorners(map1_1, map1_2, map1_3, map1_4)) // Old data: Point(-2,1,1), Point(2,1,1), Point(-2,1,-1), Point(2,1,-1)
+    	if(!ourMap.setCorners(map1_1, map1_2, map1_3, map1_4))
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}

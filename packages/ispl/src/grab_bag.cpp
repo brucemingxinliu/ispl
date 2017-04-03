@@ -1,6 +1,6 @@
 // Records rosbags of point clouds to file for ISPL processing
 // Created Mar 30 2017 by Trent Ziemer
-// Last updated Mar 30 by Trent Ziemer
+// Last updated Apr 1 by Trent Ziemer
 
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>
@@ -27,7 +27,7 @@ int cloud_number;
 bool waitForSubs()
 {
     int count = 0;
-    int time_to_wait = 5000;
+    int time_to_wait = 9;
     ros::Rate count_rate(1);
 
     while(count < time_to_wait)
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     nh_ptr = &nh;
     cloud_number = 0;
-    g_cloud_to_get = 11;
+    g_cloud_to_get = 1;
     g_cloud_counter = 0;
     g_cloud_received = false;
 

@@ -211,8 +211,9 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 	for(int i = 0; i < cloud_size; i++)
 	{
 		Point meas_point = point_cloud->points[i];
-		range = sqrt((meas_point.x)*(meas_point.x) + (meas_point.y)*(meas_point.y) 
-						+ (meas_point.z)*(meas_point.z));
+		range = sqrt( (meas_point.x - origin->x)*(meas_point.x - origin->x) 
+					+ (meas_point.y - origin->y)*(meas_point.y - origin->y) 
+					+ (meas_point.z - origin->z)*(meas_point.z - origin->z));
 		if(range > longest_range)
 		{
 			longest_range = range;
@@ -235,12 +236,12 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 
 	// Minimum percent that the specific parameter needs to be before the algorithm will stop trying to be more accurate
 	// This represents, for example if = 0.05, a less 5% change between iterations before the learning algorithm will stop itself
-	z_hit_conv_perc = 0.0001;
-	z_short_conv_perc = 0.0001;
-	z_max_conv_perc = 0.0001;
-	z_rand_conv_perc = 0.0001;
-	sig_hit_conv_perc = 0.0001;
-	lam_short_conv_perc = 0.0001;
+	z_hit_conv_perc = 0.001;
+	z_short_conv_perc = 0.001;
+	z_max_conv_perc = 0.001;
+	z_rand_conv_perc = 0.001;
+	sig_hit_conv_perc = 0.001;
+	lam_short_conv_perc = 0.001;
 
 	// Do magic!
 	return learnParameters(point_cloud, origin, map_plane);
@@ -253,7 +254,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// Convergence learning parameters
 	bool converged = false;
 	int i = 0;
-	int max_i = 20;
+	int max_i = 200;
 
 	// Holds the probabilities of each event happening as returned from p_xxx type function
 	float p_hit_val;
