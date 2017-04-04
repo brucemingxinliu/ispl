@@ -1,6 +1,6 @@
 // Records rosbags of point clouds to file for ISPL processing
 // Created Mar 30 2017 by Trent Ziemer
-// Last updated Apr 1 by Trent Ziemer
+// Last updated Apr 4 by Trent Ziemer
 
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>
@@ -27,7 +27,7 @@ int cloud_number;
 bool waitForSubs()
 {
     int count = 0;
-    int time_to_wait = 9;
+    int time_to_wait = 50;
     ros::Rate count_rate(1);
 
     while(count < time_to_wait)
@@ -62,6 +62,8 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
         {
             ROS_INFO("CLOUD CB found a cloud of size %d!", cloud_size);
         }
+
+        // DIFFERENT POSSIBLE FILTERS TO USE WHEN PROCESSING DATA
         /* FOR BAG 1
         float min_x = 0.69;
         float max_x = 0.74;
@@ -79,7 +81,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
         float max_z = 1.122;
 */  
         /* FOR BAG 3 OR 4 */
-        float min_x = 0.2; // CHANGE TO 0.55
+        float min_x = 0.55;
         float max_x = 0.63;
         float min_y = -0.11;
         float max_y = 0.5;
@@ -151,7 +153,7 @@ int main(int argc, char **argv)
     ROS_INFO("Starting BAG GRABBER");
     if(waitForSubs())
     {
-        ROS_INFO("GOT A CALLBACK SUCCESS");
+        ROS_INFO("Callback success");
     }
     else
     {

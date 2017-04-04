@@ -1,6 +1,6 @@
 // ISPL Sensor and Map model classes library header
 // Created Mar 21 2017 by Trent Ziemer
-// Last updated (NEEDS UPDATE) by Trent Ziemer
+// Last updated Apr 1 by Trent Ziemer
 
 // Various ROS headers
 #include <ros/ros.h>

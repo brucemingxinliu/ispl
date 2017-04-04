@@ -1,37 +1,26 @@
 <launch> 
-	<!-- Start point cloud rosbag play to provide data; alternatively could use an actual data source (like a wobbling LIDAR or Kinect) -->
-	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/rosbags/1.bag">\
-		<!-- <remap from="/wobbler_3d_cloud" to="/ispl/point_cloud" /> -->
+	<!-- Start point cloud rosbag play to provide data; alternatively could use an actual data source (like a wobbling LIDAR or Kinect) or just a file -->
+	<node pkg="rosbag" type="play" name="rosbag_babs_record"  args="/home/mordoc/ROSBAG_NAME">
 		<remap from="/front_wobbler/point_cloud" to="/ispl/point_cloud" />
 	</node>
 
 	<node pkg="ispl" type="learn_params" name="learn_params" output="screen">
 		<param name="data_source" value="file" />
-		<param name="filename" value="/home/mordoc/point_cloud4_11_noise.txt" />
+		<param name="filename" value="/home/mordoc/FILENAME.txt" />
 
-		<!-- <param name="sensor_origin_x" value="0" />
+		<!-- --> <param name="sensor_origin_x" value="0" />
 		<param name="sensor_origin_y" value="0" />
-		<param name="sensor_origin_z" value="0" />  -->
+		<param name="sensor_origin_z" value="0" /> 
 
-		<!-- OLD MAP  <param name="sensor_origin_x" value="-0.175" />
-		<param name="sensor_origin_y" value="0.15" />
-		<param name="sensor_origin_z" value="0.6" />-->
-
-		<!-- BRUCE  <param name="sensor_origin_x" value="-0.2795" />
-		<param name="sensor_origin_y" value="-0.767" />
-		<param name="sensor_origin_z" value="-0.115" />  -->
-
-		<!-- FOR MAP 5 my estimation -->
+		<!-- For later maps
 		<param name="sensor_origin_x" value="-0.47938" />
 		<param name="sensor_origin_y" value="-0.13927" />
-		<param name="sensor_origin_z" value="0.52035" /> 
+		<param name="sensor_origin_z" value="0.52035" /> -->
 	</node>
 
+	<!-- Run the test node wrapper -->
 	<node pkg="ispl" type="test_ispl" name="test_ispl" output="screen"> 
 	</node>
-
-	<!--<node pkg="tf" type="static_transform_publisher" name="static_transform_publisher" args="0.59162 -0.10631 0.819 -1.57 -1.57 0 pc lidar_link 10" output="screen"> 
-	</node>-->
 
 </launch>
 

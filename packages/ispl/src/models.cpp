@@ -1,6 +1,6 @@
 // ISPL Sensor and Map model classes library
 // Created Mar 21 2017 by Trent Ziemer
-// Last updated (NEEDS UPDATE) by Trent Ziemer
+// Last updated April 4 by Trent Ziemer
 
 #include <ispl/models.h>
 #include <ispl/math_functions.h>
@@ -108,9 +108,6 @@ Point MapFixture::rayTrace(Point origin, Point rayPoint)
 
 	//ROS_INFO("2PLANE EQUATION IS: %f, %f, %f, %f", A, B, C, D);
 
-	// Equation credit (and reference for those mathematically curious) goes to:
-	//    http://www.ambrsoft.com/TrigoCalc/Plan3D/PlaneLineIntersection_.htm
-
 	// This is the main calculation term, which is common to each of the three dimensions intersection points
 	float common_term = (A*x1 + B*y1 + C*z1 + D)/(A*a + B*b + C*c); 
 	// Calculate the intersection point 
@@ -193,11 +190,7 @@ bool SensorModel::setInitialParams(float z_hit_init, float z_short_init, float z
 bool SensorModel::createModel(PointCloud * point_cloud, 
 								MapFixture * map_plane,
 								Point * origin)
-{
-	// for debug?
-	param_file.open("/home/mordoc/ispl_model_file.txt");
-	//param_file << "z_hit" << " " << "z_short" << " " << "z_max" << " " << "z_rand" << " " << "sig_hit" << " " << "lam_short" << std::endl;
-	
+{	
 	int cloud_size = point_cloud->points.size();
 
 	ROS_INFO("Modeling sensor based on %d points", cloud_size);
@@ -230,11 +223,6 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 	{
 		ROS_WARN("COULD NOT FIND furthest_z/longest_range, furthest_z is uninitialized!");
 	}
-
-	/*if(furthest_z < 3)
-	{
-		furthest_z = 3;
-	}*/
 
 	// Governs the "width" of the z_max bin (numerical impracticality-driven)
 	// This seems reasonable to me. Current testing usually shows that it's identically 0, so this may be over precautious
@@ -272,8 +260,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 	// Overall normalization value
 	float eta;
 
-	bool first_time = true;
-
 	// Loop following until convergence criteria is met or we reach the maximum number of tries
 	do
 	{
@@ -303,11 +289,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			float relative_distance = computeDistance(sensor_origin, data_cloud[k], intersection_point);
 			if(!std::isfinite(relative_distance))
 			{
-				//ROS_WARN("Record relative distance failed: non-finite!");
-			}
-			if(first_time == true)
-			{
-				param_file << relative_distance << std::endl;
+				ROS_WARN("Record relative distance failed: non-finite!");
 			}
 
 			eta = 1/(p_hit_val + p_short_val + p_max_val + p_rand_val);
@@ -333,7 +315,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			e_max.push_back(e_max_val);
 			e_rand.push_back(e_rand_val);
 		}
-		first_time = false;
 	
 		// Compute sums...
 		for(int j = 0; j < e_hit.size(); j++)
@@ -402,15 +383,6 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			lam_short = e_short_sum/e_short_ext_sum;
 		}
 
-		/*
-		ROS_INFO("AFTER:");
-		ROS_INFO("z_hit: %f", z_hit);
-		ROS_INFO("z_short: %f", z_short);
-		ROS_INFO("z_max: %f", z_max);
-		ROS_INFO("z_rand: %f", z_rand);
-		ROS_INFO("sig_hit: %f", sig_hit);
-		ROS_INFO("lam_short: %f \n \n", lam_short);
-		*/
 		int num_conv_param = 0;
 		// There's a much better way to diagnose issues here and reduce computation time, 
 		//     but until then we simply check if each value has converged and if so, raise that flag to leave the do...while loop.
@@ -449,9 +421,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		{
 			converged = true;
 		}
-
-		//param_file << z_hit << " " << z_short << " " << z_max << " " << z_rand << " " << sig_hit << " " << lam_short << " " << std::endl;
-		
+	
 		i++;
 	}
 	while((converged == false) && (i < max_i));
@@ -496,13 +466,9 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 	{
 		// Compute the total area under the normal distribution curve
 		float integrated_normalizer = integral(normalDistribution, 0, furthest_z, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
-		//float in2 = normalDistribution(z_k_star, z_k_star, sig_hit*sig_hit);
 		float eta = 1/integrated_normalizer;
-		//float eta2 = 1/in2;
 		float nd = normalDistribution(z_k, z_k_star, sig_hit*sig_hit);
 		//ROS_INFO("Normal dist at %f with mean %f and var %f is %f", z_k, z_k_star, sig_hit*sig_hit, nd);
-		// Alternative to above: 
-		//float nd2 = integral(normalDistribution, 0, z_k, INTEGRAL_STEPS, z_k_star, sig_hit*sig_hit);
 		float p_hit;
 		if(!std::isfinite(eta))
 		{

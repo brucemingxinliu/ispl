@@ -1,6 +1,6 @@
 // Internal Sensor Parameter Learning node
 // Created Feb 23 2017 by Trent Ziemer
-// Last updated (NEEDS UPDATE) by Trent Ziemer
+// Last updated April 4 by Trent Ziemer
 
 // Includes map fixture and sensor model classes
 #include <ispl/models.h>
@@ -28,6 +28,8 @@ Notes: WARNING: This function is hacky.
 void cloudCB(const PointCloud::ConstPtr& point_cloud)
 {
 	int cloud_size = point_cloud->points.size();
+
+	//////////    DIFFERENT POSSIBLE FILTERS FOR VARIOUS DATA SETS. NOTE: THIS IS A HACKY WAY
 	/* FOR BAG 1 
 	float min_x = 0.69;
 	float max_x = 0.74;
@@ -37,7 +39,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 	float max_z = 1.122;
 	*/
 
-	/* FOR BAG 1 with Bruce Coords */
+	/* FOR BAG 1 with B Coords */
 	float min_x = -0.4;
 	float max_x = 0.4;
 	float min_y = -0.1;
@@ -63,7 +65,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 	float max_z = 1.122;
 	*/
 
-	/* FOR BAG 5 with Bruce Coords 
+	/* FOR BAG 5 with B Coords 
 	float min_x = -27.8/100;
 	float max_x = 27.8/100;
 	float min_y = -18.07/100;
@@ -71,7 +73,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 	float min_z = -0.01;
 	float max_z = 44/100; */ 
 
-	/* FOR BAG 6 with Bruce Coords 
+	/* FOR BAG 6 with B Coords 
 	float min_x = -0.0799;
 	float max_x = 0.0799;
 	float min_y = -0.321;
@@ -93,7 +95,7 @@ void cloudCB(const PointCloud::ConstPtr& point_cloud)
 				{
 					if(counter % filtering_constant == 0)
 					{
-						//g_point_cloud_data.push_back(point_cloud->points[i]);		  CHANGE THIS TRENT
+						g_point_cloud_data.push_back(point_cloud->points[i]);		 // NOTE: CHANGE THIS; IT BREAK THE FILE READ IF WE DO THIS WHILE TRYING TO FILE READ AND THERE IS A POINT CLOUD GETTING PUBLISHED TOO
 					}
 					counter++;
 				}
@@ -189,7 +191,7 @@ bool getDataFromFile(std::string filename)
     float value;
     float value2;
     int j = 1;
-    if(0) // THIS IS A HACK DONT EVEN BOTHER TRYING
+    if(0) // THIS IS A HACK DONT EVEN BOTHER TRYING TO COMPREHEND
     {
     	while(input_data >> value)
     	{
@@ -230,10 +232,6 @@ bool getDataFromFile(std::string filename)
 			g_point_cloud_data.push_back(Point(x, y, value));
 			getting_z = false;
         	getting_x = true;
-        }
-        else
-        {
-        	ROS_ERROR("ERROR IN CHOOSING WHAT TO GET!");
         }
     }
     }
@@ -281,8 +279,10 @@ int main(int argc, char **argv)
 
 	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
 
+	//////////    THESE ARE VARIOUS "MAP" PLANES (TEST FIXTURES) THAT WE CAN USE. NOTE: THIS IS MEGA HACKY
+	// WARNING: Need to set the variable names in the setCorners method call below
 	// 1
-	Point map1_1 = Point(-0.33, 0, 0);           /////////// CHANGE ME to -1????
+	Point map1_1 = Point(-0.33, 0, 0);       
 	Point map1_2 = Point(-0.33, 0, 0.43);
 	Point map1_3 = Point( 0.33, 0, 0.43);
 	Point map1_4 = Point( 0.33, 0, 0);
@@ -329,7 +329,7 @@ int main(int argc, char **argv)
 	Point map6_3 = Point(0.60237, 0.17013, 1.0839);
 	Point map6_4 = Point(0.61587, 0.19083, 0.54741);
 
-	// freq_data2 = FAKE
+	// freq_data2 
 	Point mapf_1 = Point(1.049, 0.97369, 1.0071);
 	Point mapf_2 = Point(1.0471, 0.98999, 0.98648);
 	Point mapf_3 = Point(0.99777, 1.0457, 0.98328);
@@ -370,16 +370,16 @@ int main(int argc, char **argv)
     	}
     	else
     	{
-    		ROS_WARN("GIVEN DATA SOURCE NAME IS NOT SET RIGHT");
+    		ROS_WARN("Failed to read data_source type!");
     		test_passed = false;
     	}
 
-    	if(!ourMap.setCorners(map3_1, map3_2, map3_3, map3_4))
+    	if(!ourMap.setCorners(map1_1, map1_2, map1_3, map1_4))
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}
 
-    	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
+    	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are, except for converge time.
     	if(!ourSensor.setInitialParams(0.4, 0.3, 0.2, 0.1, 0.5, 1.1))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
@@ -442,7 +442,8 @@ int main(int argc, char **argv)
    	int time_to_wait = 1000; // ms
 	ros::Rate count_rate(10); // ms
 	int count = 0;
-	// Create quick map PC
+
+	// Create point cloud of the "map" that we used
 	PointCloud map_pc;
 
    	while(ros::ok() && (count < time_to_wait))
