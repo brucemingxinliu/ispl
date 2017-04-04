@@ -291,9 +291,8 @@ int main(int argc, char **argv)
 	Point map1_1 = Point(0.6935, 0.47187, 1.1);
 	Point map1_2 = Point(0.724,-0.11783,1.1219);
 	Point map1_3 = Point(0.70244,0.4681,0.48421);
-	Point map1_4 = Point(0.73256,-0.13364,0.4661);
-	*/
-
+	Point map1_4 = Point(0.73256,-0.13364,0.4661); */
+	
 	// 2 FROM MY ESTIMATIONS
 	Point map2_1 = Point(0.564, 0.47979, 0.49127);
 	Point map2_2 = Point(0.623,0.5034,1.1075);
@@ -306,11 +305,17 @@ int main(int argc, char **argv)
 	Point map3_3 = Point(0.582,0.4927,1.0735);
 	Point map3_4 = Point(0.56, 0.49 ,0.485);
 
-	// 5
+	/* // 5
 	Point map5_1 = Point(-0.2769, -0.18051, 0);
 	Point map5_2 = Point(-0.2769, -0.18051, 0.43);
 	Point map5_3 = Point(0.2769, 0.18051, 0.43);
-	Point map5_4 = Point(0.2769, 0.18051, 0);
+	Point map5_4 = Point(0.2769, 0.18051, 0); */
+
+	// 5 - MY ESTIMATIONS
+	Point map5_1 = Point(0.62667, 0.2762, 0.52265);
+	Point map5_2 = Point(0.61922, 0.17958, 1.1208);
+	Point map5_3 = Point(0.46219, 0.-0.02067, 1.1212);
+	Point map5_4 = Point(0.38731, -0.018492, 0.481);
 
 	// 6
 	Point map6_1 = Point(-0.07986, -0.3201, 0);
@@ -357,7 +362,7 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	if(!ourMap.setCorners(map3_1, map3_2, map3_3, map3_4))
+    	if(!ourMap.setCorners(map5_1, map5_2, map5_3, map5_4))
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}
@@ -434,10 +439,10 @@ int main(int argc, char **argv)
 		g_point_cloud_data.header.frame_id = "lidar_link"; // Or lidar link?
 		pc_pub_ptr->publish(g_point_cloud_data);
 
-		map_pc.push_back(map3_1);
-		map_pc.push_back(map3_2);
-		map_pc.push_back(map3_3);
-		map_pc.push_back(map3_4);
+		map_pc.push_back(map5_1);
+		map_pc.push_back(map5_2);
+		map_pc.push_back(map5_3);
+		map_pc.push_back(map5_4);
 		map_pc.push_back(sensorOrigin);
 		
 		map_pc.header.frame_id = "lidar_link";

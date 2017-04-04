@@ -55,7 +55,8 @@ bool MapFixture::setCorners(Point corner1,
 	// The fourth parameter of the plane is a function of other already-found parameters
 	//   Think of it like an 'offset' value that is dependent on the rest of the plane parameters
 	plane_parameter = -(plane_normal.x*origin_corner.x + plane_normal.y*origin_corner.y + plane_normal.z*origin_corner.z);
-	//ROS_INFO("PLANE EQUATION IS: %f, %f, %f, %f", plane_normal.x, plane_normal.y, plane_normal.z, plane_parameter);
+	ROS_INFO("PLANE EQUATION IS: %f, %f, %f, %f", plane_normal.x, plane_normal.y, plane_normal.z, plane_parameter);
+	ROS_INFO("AND ORIGIN CORNER IS %f, %f, %f", origin_corner.x, origin_corner.y, origin_corner.z);
 	
 	// If the fourth (validation corner) is found to be near enough to the plane, then setting the corners was successful
 	if(validateCorner(validation_corner))
@@ -302,7 +303,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 			float relative_distance = computeDistance(sensor_origin, data_cloud[k], intersection_point);
 			if(!std::isfinite(relative_distance))
 			{
-				ROS_WARN("Record relative distance failed: non-finite!");
+				//ROS_WARN("Record relative distance failed: non-finite!");
 			}
 			if(first_time == true)
 			{
@@ -478,7 +479,8 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 	// Ray trace from the origin to the measurement point to find where it intersects the map
 	// This point is the location of where the meas_point 'should' have been
 	Point intersection_point = m->rayTrace(sensor_origin, meas_point);
-
+	//ROS_INFO("HI: (%f, %f, %f) to (%f, %f, %f) is (%f, %f, %f)", sensor_origin.x, sensor_origin.y, sensor_origin.z, 
+		 // meas_point.x, meas_point.y, meas_point.z, intersection_point.x, intersection_point.y, intersection_point.z);
 	// Compute the magnitude distance from the sensor to the measurment point
 	float z_k = vectorLength(sensor_origin, meas_point);
 
