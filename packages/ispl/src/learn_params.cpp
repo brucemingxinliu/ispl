@@ -189,7 +189,7 @@ bool getDataFromFile(std::string filename)
     float value;
     float value2;
     int j = 1;
-    if(1) // THIS IS A HACK DONT EVEN BOTHER TRYING
+    if(0) // THIS IS A HACK DONT EVEN BOTHER TRYING
     {
     	while(input_data >> value)
     	{
@@ -282,10 +282,10 @@ int main(int argc, char **argv)
 	// Set the dimensions (corner points) of the map fixture that the LIDAR will get data for
 
 	// 1
-	Point map1_1 = Point(-0.33, -1, 0);           /////////// CHANGE ME to -1????
-	Point map1_2 = Point(-0.33, -1, 0.43);
-	Point map1_3 = Point( 0.33, -1, 0.43);
-	Point map1_4 = Point( 0.33, -1, 0);
+	Point map1_1 = Point(-0.33, 0, 0);           /////////// CHANGE ME to -1????
+	Point map1_2 = Point(-0.33, 0, 0.43);
+	Point map1_3 = Point( 0.33, 0, 0.43);
+	Point map1_4 = Point( 0.33, 0, 0);
 
 	/* FROM MY ESTIMATIONS
 	Point map1_1 = Point(0.6935, 0.47187, 1.1);
@@ -301,10 +301,10 @@ int main(int argc, char **argv)
 	Point map2_4 = Point(0.6045,-0.1152,0.4672);
 
 	// 3 == 4 FROM MY ESTIMATIONS
-	Point map3_1 = Point(0.6026, -0.1106, 1.097);
-	Point map3_2 = Point(0.624,-0.11783,1.1219);
+	Point map3_1 = Point(0.6026, -0.1106, 0.49);
+	Point map3_2 = Point(0.624,-0.11783,1.12);
 	Point map3_3 = Point(0.582,0.4927,1.0735);
-	Point map3_4 = Point(0.56,0.49,0.48);
+	Point map3_4 = Point(0.56, 0.49 ,0.485);
 
 	// 5
 	Point map5_1 = Point(-0.2769, -0.18051, 0);
@@ -357,13 +357,13 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	if(!ourMap.setCorners(map1_1, map1_2, map1_3, map1_4))
+    	if(!ourMap.setCorners(map3_1, map3_2, map3_3, map3_4))
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}
 
     	// Set the "seed" values of the 6 internal sensor parameters. Doesn't matter much what they are?
-    	if(!ourSensor.setInitialParams(1, 1, 1, 1, 0.5, 1.1))
+    	if(!ourSensor.setInitialParams(0.4, 0.3, 0.2, 0.1, 0.5, 1.1))
     	{
     		ROS_WARN("Failed to set initial model parameter values!");
     		test_passed = false;
@@ -431,13 +431,13 @@ int main(int argc, char **argv)
    	while(ros::ok() && (count < time_to_wait))
    	{
 		// Send an output cloud of what we measured, for other nodes to see
-		g_point_cloud_data.header.frame_id = "pc"; // Or lidar link?
+		g_point_cloud_data.header.frame_id = "lidar_link"; // Or lidar link?
 		pc_pub_ptr->publish(g_point_cloud_data);
 
-		map_pc.push_back(map1_1);
-		map_pc.push_back(map1_2);
-		map_pc.push_back(map1_3);
-		map_pc.push_back(map1_4);
+		map_pc.push_back(map3_1);
+		map_pc.push_back(map3_2);
+		map_pc.push_back(map3_3);
+		map_pc.push_back(map3_4);
 		map_pc.push_back(sensorOrigin);
 		
 		map_pc.header.frame_id = "lidar_link";

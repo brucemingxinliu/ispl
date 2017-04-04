@@ -230,10 +230,10 @@ bool SensorModel::createModel(PointCloud * point_cloud,
 		ROS_WARN("COULD NOT FIND furthest_z/longest_range, furthest_z is uninitialized!");
 	}
 
-	if(furthest_z < 3)
+	/*if(furthest_z < 3)
 	{
 		furthest_z = 3;
-	}
+	}*/
 
 	// Governs the "width" of the z_max bin (numerical impracticality-driven)
 	// This seems reasonable to me. Current testing usually shows that it's identically 0, so this may be over precautious
@@ -374,7 +374,7 @@ bool SensorModel::learnParameters(PointCloud * Z, Point * X, MapFixture * m)
 		z_max = e_max_sum/mag_Z;
 		z_rand = e_rand_sum/mag_Z;
 
-		// ROS_INFO("ehs=%f ess=%f ems=%f ers=%f sig_hit=%f lam_short=%f", e_hit_sum, e_short_sum, e_max_sum, e_rand_sum, sig_hit, lam_short);
+		//ROS_INFO("ehs=%f ess=%f ems=%f ers=%f sig_hit=%f lam_short=%f", e_hit_sum, e_short_sum, e_max_sum, e_rand_sum, sig_hit, lam_short);
 
 		if(!normalized(z_hit, z_short, z_max, z_rand))
 		{
@@ -514,8 +514,8 @@ float SensorModel::p_hit(Point meas_point, Point sensor_origin, MapFixture * m)
 		if(0)
 		{
 			ROS_WARN("WARNING: Potential improper p_hit value!");
-			//ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
-			//ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
+			ROS_INFO("Measured Pt.: (%f, %f, %f)", meas_point.x, meas_point.y, meas_point.z);
+			ROS_INFO("Intersection Pt.: (%f, %f, %f)", intersection_point.x, intersection_point.y, intersection_point.z);
 			ROS_INFO("Distance to measured point z_k = %f", z_k);
 			ROS_INFO("Distance to intersection point z_k_star = %f", z_k_star);
 			ROS_INFO("Sig_hit = %f  furthest_z = %f", sig_hit, furthest_z);

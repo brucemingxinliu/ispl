@@ -7,26 +7,26 @@
 
 	<node pkg="ispl" type="learn_params" name="learn_params" output="screen">
 		<param name="data_source" value="file" />
-		<param name="filename" value="/home/mordoc/freq_data2.txt" />
+		<param name="filename" value="/home/mordoc/point_cloud4.txt" />
 
-		<param name="sensor_origin_x" value="0" />
+		<!----><param name="sensor_origin_x" value="0" />
 		<param name="sensor_origin_y" value="0" />
-		<param name="sensor_origin_z" value="0" />
+		<param name="sensor_origin_z" value="0" />  
 
-		<!-- OLD MAP <param name="sensor_origin_x" value="-0.175" />
+		<!-- OLD MAP  <param name="sensor_origin_x" value="-0.175" />
 		<param name="sensor_origin_y" value="0.15" />
-		<param name="sensor_origin_z" value="0.6" /> -->
+		<param name="sensor_origin_z" value="0.6" />-->
 
 		<!--<param name="sensor_origin_x" value="-0.2795" />
 		<param name="sensor_origin_y" value="-0.767" />
-		<param name="sensor_origin_z" value="-0.115" /> --> 
+		<param name="sensor_origin_z" value="-0.115" />  -->
 	</node>
 
 	<node pkg="ispl" type="test_ispl" name="test_ispl" output="screen"> 
 	</node>
 
-	<node pkg="tf" type="static_transform_publisher" name="static_transform_publisher" args="0.59162 -0.10631 0.819 -1.57 -1.57 0 pc lidar_link 10" output="screen"> 
-	</node>
+	<!--<node pkg="tf" type="static_transform_publisher" name="static_transform_publisher" args="0.59162 -0.10631 0.819 -1.57 -1.57 0 pc lidar_link 10" output="screen"> 
+	</node>-->
 
 </launch>
 
