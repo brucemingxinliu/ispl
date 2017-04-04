@@ -329,6 +329,12 @@ int main(int argc, char **argv)
 	Point map6_3 = Point(0.60237, 0.17013, 1.0839);
 	Point map6_4 = Point(0.61587, 0.19083, 0.54741);
 
+	// freq_data2 = FAKE
+	Point mapf_1 = Point(1.049, 0.97369, 1.0071);
+	Point mapf_2 = Point(1.0471, 0.98999, 0.98648);
+	Point mapf_3 = Point(0.99777, 1.0457, 0.98328);
+	Point mapf_4 = Point(0.99012, 1.0189, 1.0196);
+
     if(test_active == true)
     {
 		if(!nh_ptr->getParam("data_source", data_source))
@@ -368,7 +374,7 @@ int main(int argc, char **argv)
     		test_passed = false;
     	}
 
-    	if(!ourMap.setCorners(map6_1, map6_2, map6_3, map6_4))
+    	if(!ourMap.setCorners(map3_1, map3_2, map3_3, map3_4))
     	{
     		ROS_WARN("Failed to set corners on map fixture!");
     	}
@@ -445,10 +451,10 @@ int main(int argc, char **argv)
 		g_point_cloud_data.header.frame_id = "lidar_link"; // Or lidar link?
 		pc_pub_ptr->publish(g_point_cloud_data);
 
-		map_pc.push_back(map6_1);
-		map_pc.push_back(map6_2);
-		map_pc.push_back(map6_3);
-		map_pc.push_back(map6_4);
+		map_pc.push_back(map3_1);
+		map_pc.push_back(map3_2);
+		map_pc.push_back(map3_3);
+		map_pc.push_back(map3_4);
 		map_pc.push_back(sensorOrigin);
 		
 		map_pc.header.frame_id = "lidar_link";
