@@ -1,6 +1,5 @@
 // Records rosbags of point clouds to file for ISPL processing
-// Created Mar 30 2017 by Trent Ziemer
-// Last updated Apr 4 by Trent Ziemer
+
 
 #include <ros/ros.h>
 #include <std_msgs/Int16.h>
