@@ -1,6 +1,6 @@
 // ISPL Sensor and Map model classes library
 // Created Mar 21 2017 by Trent Ziemer
-// Last updated April 4 by Trent Ziemer
+//updated by Mingxin Liu
 
 #include <ispl/models.h>
 #include <ispl/math_functions.h>
