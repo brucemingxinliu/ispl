@@ -1,6 +1,6 @@
 // Internal Sensor Parameter Learning node
-// Created Feb 23 2017 by Trent Ziemer
-// Last updated April 4 by Trent Ziemer
+//created by Trent Ziemer
+//updated by Mingxin Liu
 
 // Includes map fixture and sensor model classes
 #include <ispl/models.h>
