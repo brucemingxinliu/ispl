@@ -5,7 +5,7 @@ Algorithm implementation for Algorithmic Robotics class taught by Dr. "Cenk" Cav
 
 This ROS package will analyze LIDAR, SONAR, or other range-finding sensors for scan data and attempt to learn the internal model parameters, according to the algorithms demonstrated in Probabilistic Robotics by Thrun, Burgard, and Fox (pg 131, sec 6.3.2).
 
-Created and maintained by Trent Ziemer
+Created and maintained by Trent Ziemer and Mingxin Liu
 
 ## Example usage
 roslaunch ispl ispl.launch
